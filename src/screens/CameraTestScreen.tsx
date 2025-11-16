@@ -56,15 +56,6 @@ export const CameraTestScreen = () => {
             <Text style={styles.infoText}>• Платформа: iOS/Android</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.flipButton}
-            onPress={() =>
-              setFacing((current) => (current === "back" ? "front" : "back"))
-            }
-          >
-            <Text style={styles.flipButtonText}>🔄 Переключить</Text>
-          </TouchableOpacity>
-
           <View style={styles.instructionsBox}>
             <Text style={styles.instructionsTitle}>Инструкции:</Text>
             <Text style={styles.instructionsText}>
