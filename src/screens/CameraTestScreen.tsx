@@ -1,20 +1,58 @@
-import React, { useState } from "react";
+import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   Dimensions,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
+import { usePoseLandmarker } from "../hooks/usePoseLandmarker";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 export const CameraTestScreen = () => {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>("front");
+  const [torsoCoords, setTorsoCoords] = useState({ x: 0, y: 0 });
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Пока загружается разрешение
+  // ✅ Хук вызываем на верхнем уровне, внутри него проверка Platform.OS
+  usePoseLandmarker(videoRef, setTorsoCoords);
+
+  // Запуск камеры на Web
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    if (!permission?.granted || !videoRef.current) return;
+
+    const video = videoRef.current;
+
+    const startCameraAndPose = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: false,
+        });
+        video.srcObject = stream;
+
+        await new Promise<void>((resolve) => {
+          video.onloadedmetadata = () => {
+            video.play();
+            resolve();
+          };
+        });
+
+        // Только после того как видео запущено
+        usePoseLandmarker(videoRef, setTorsoCoords);
+      } catch (err) {
+        console.error("Не удалось получить камеру:", err);
+      }
+    };
+
+    startCameraAndPose();
+  }, [permission]);
+
   if (!permission) {
     return (
       <View style={styles.container}>
@@ -23,7 +61,6 @@ export const CameraTestScreen = () => {
     );
   }
 
-  // Если нет разрешения на камеру
   if (!permission.granted) {
     return (
       <View style={styles.container}>
@@ -40,33 +77,48 @@ export const CameraTestScreen = () => {
     );
   }
 
-  // Основной экран с камерой
   return (
     <View style={styles.container}>
-      <CameraView style={styles.camera} facing={facing}>
-        <View style={styles.overlay}>
-          <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>✅ Камера работает!</Text>
-            <Text style={styles.infoText}>
-              • Камера: {facing === "front" ? "Фронтальная" : "Задняя"}
-            </Text>
-            <Text style={styles.infoText}>
-              • Разрешение экрана: {screenWidth}x{screenHeight}
-            </Text>
-            <Text style={styles.infoText}>• Платформа: iOS/Android</Text>
-          </View>
+      {Platform.OS === "web" ? (
+        <video
+          ref={videoRef}
+          style={styles.camera}
+          autoPlay
+          playsInline
+          muted
+        />
+      ) : (
+        <CameraView style={styles.camera} facing={facing} />
+      )}
 
-          <View style={styles.instructionsBox}>
-            <Text style={styles.instructionsTitle}>Инструкции:</Text>
-            <Text style={styles.instructionsText}>
-              1. Используйте фронтальную камеру{"\n"}
-              2. Встаньте на расстоянии 1-2 метра{"\n"}
-              3. Убедитесь, что торс виден полностью{"\n"}
-              4. Проверьте освещение (должно быть светло)
+      <View style={styles.overlay}>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoTitle}>✅ Камера работает!</Text>
+          <Text style={styles.infoText}>
+            • Камера: {facing === "front" ? "Фронтальная" : "Задняя"}
+          </Text>
+          <Text style={styles.infoText}>
+            • Разрешение экрана: {screenWidth}x{screenHeight}
+          </Text>
+          <Text style={styles.infoText}>• Платформа: {Platform.OS}</Text>
+          {Platform.OS === "web" && (
+            <Text style={styles.infoText}>
+              • Торс X: {torsoCoords.x.toFixed(2)}, Y:{" "}
+              {torsoCoords.y.toFixed(2)}
             </Text>
-          </View>
+          )}
         </View>
-      </CameraView>
+
+        <View style={styles.instructionsBox}>
+          <Text style={styles.instructionsTitle}>Инструкции:</Text>
+          <Text style={styles.instructionsText}>
+            1. Используйте фронтальную камеру{"\n"}
+            2. Встаньте на расстоянии 1-2 метра{"\n"}
+            3. Убедитесь, что торс виден полностью{"\n"}
+            4. Проверьте освещение (должно быть светло)
+          </Text>
+        </View>
+      </View>
     </View>
   );
 };
@@ -78,21 +130,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  camera: {
-    width: screenWidth,
-    height: screenHeight,
-  },
+  camera: { width: screenWidth, height: screenHeight },
   overlay: {
-    flex: 1,
-    backgroundColor: "transparent",
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
     justifyContent: "space-between",
     padding: 20,
     paddingTop: 60,
   },
-  message: {
-    color: "#fff",
-    fontSize: 18,
-  },
+  message: { color: "#fff", fontSize: 18 },
   permissionBox: {
     backgroundColor: "#fff",
     borderRadius: 20,
@@ -121,18 +170,10 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 10,
     elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   infoBox: {
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: "rgba(0,0,0,0.7)",
     borderRadius: 15,
     padding: 20,
     marginTop: 20,
@@ -149,25 +190,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontFamily: "monospace",
   },
-  flipButton: {
-    alignSelf: "center",
-    backgroundColor: "#2196F3",
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 50,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  flipButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
   instructionsBox: {
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "rgba(255,255,255,0.9)",
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
@@ -178,9 +202,5 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 10,
   },
-  instructionsText: {
-    fontSize: 15,
-    color: "#555",
-    lineHeight: 24,
-  },
+  instructionsText: { fontSize: 15, color: "#555", lineHeight: 24 },
 });
