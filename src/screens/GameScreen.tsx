@@ -25,31 +25,28 @@ interface PlatformType {
 }
 
 export const GameScreen = () => {
-  const PLATFORM_COUNT = 20; // Увеличили количество платформ
+  const PLATFORM_COUNT = 20;
 
-  // Позиция Doodle (top координаты, 0 = верх экрана)
   const x = useSharedValue(width / 2 - DOODLE_SIZE / 2);
-  const y = useSharedValue(height - 200); // Начинаем внизу
-  const velocityY = useSharedValue(0); // Скорость по Y (положительная = вниз, отрицательная = вверх)
+  const y = useSharedValue(height - 200);
+  const velocityY = useSharedValue(0);
 
   const [score, setScore] = useState(0);
   const moveDirection = useRef<"left" | "right" | null>(null);
   const started = useRef(false);
   const gameOver = useRef(false);
   const lastPlatformHit = useRef<number | null>(null);
-  const scrollOffset = useRef(0); // Общий сдвиг камеры
-  const lastJumpTime = useRef(0); // Время последнего прыжка
-  const cameraOffset = useSharedValue(0); // Плавное смещение камеры
+  const scrollOffset = useRef(0);
+  const lastJumpTime = useRef(0);
+  const cameraOffset = useSharedValue(0);
 
-  // Создаем начальные позиции платформ (обычный массив)
   const platformPositions = useMemo(() => {
     const positions: { x: number; y: number }[] = [];
-    const MAX_DISTANCE = 90; // Максимальное расстояние между платформами
-    const MIN_DISTANCE = 50; // Минимальное расстояние
+    const MAX_DISTANCE = 90;
+    const MIN_DISTANCE = 50;
 
-    // Первая платформа - гарантированно по центру под персонажем
-    const startPlatformY = height - 100; // Y координата стартовой платформы
-    const startPlatformX = width / 2 - PLATFORM_WIDTH / 2; // X координата по центру
+    const startPlatformY = height - 100;
+    const startPlatformX = width / 2 - PLATFORM_WIDTH / 2;
 
     positions.push({
       x: startPlatformX,
@@ -60,7 +57,6 @@ export const GameScreen = () => {
       startPlatformY -
       (Math.random() * (MAX_DISTANCE - MIN_DISTANCE) + MIN_DISTANCE);
 
-    // Остальные платформы генерируем случайно (начинаем с i = 1, так как 0-я уже добавлена)
     for (let i = 1; i < PLATFORM_COUNT; i++) {
       const platformX = Math.random() * (width - PLATFORM_WIDTH - 40) + 20;
 
@@ -69,12 +65,11 @@ export const GameScreen = () => {
         y: currentY,
       });
 
-      currentY -= Math.random() * (MAX_DISTANCE - MIN_DISTANCE) + MIN_DISTANCE; // Поднимаемся вверх
+      currentY -= Math.random() * (MAX_DISTANCE - MIN_DISTANCE) + MIN_DISTANCE;
     }
 
     return positions;
   }, []);
-  // Создаем shared values для каждой платформы
   const platform0X = useSharedValue(platformPositions[0].x);
   const platform0Y = useSharedValue(platformPositions[0].y);
   const platform1X = useSharedValue(platformPositions[1].x);
@@ -116,7 +111,6 @@ export const GameScreen = () => {
   const platform19X = useSharedValue(platformPositions[19].x);
   const platform19Y = useSharedValue(platformPositions[19].y);
 
-  // Собираем все платформы в массив
   const platforms = useMemo<PlatformType[]>(
     () => [
       { x: platform0X, y: platform0Y },
@@ -143,7 +137,6 @@ export const GameScreen = () => {
     []
   );
 
-  // Анимации Doodle (используем top вместо bottom) с учётом смещения камеры
   const doodleStyle = useAnimatedStyle(() => ({
     left: x.value,
     top: y.value + cameraOffset.value,
@@ -152,7 +145,6 @@ export const GameScreen = () => {
     position: "absolute",
   }));
 
-  // Анимации платформ (используем top вместо bottom) с учётом смещения камеры
   const platformStyles = platforms.map((p) =>
     useAnimatedStyle(() => ({
       left: p.x.value,
@@ -163,86 +155,67 @@ export const GameScreen = () => {
     }))
   );
 
-  // Функция для создания новой платформы наверху
   const createNewPlatform = (platform: PlatformType) => {
-    // Находим самую высокую (минимальную Y) платформу
     const highestY = Math.min(...platforms.map((p) => p.y.value));
 
-    // Создаем новую платформу выше на безопасном расстоянии
-    const verticalDistance = Math.random() * 40 + 60; // 60-100 пикселей
+    const verticalDistance = Math.random() * 40 + 60;
     const newY = highestY - verticalDistance;
 
-    // Генерируем X позицию (не слишком близко к краям)
     const newX = Math.random() * (width - PLATFORM_WIDTH - 60) + 30;
 
     platform.y.value = newY;
     platform.x.value = newX;
   };
 
-  // Игровой цикл
   useEffect(() => {
     if (gameOver.current) return;
 
     const interval = setInterval(() => {
       const currentTime = Date.now();
 
-      // Движение Doodle по X
       if (moveDirection.current === "left") {
         x.value = Math.max(0, x.value - MOVE_SPEED);
       } else if (moveDirection.current === "right") {
         x.value = Math.min(width - DOODLE_SIZE, x.value + MOVE_SPEED);
       }
 
-      // Применяем гравитацию (увеличиваем скорость падения)
       velocityY.value += GRAVITY;
 
-      // Двигаем персонажа (положительная velocityY = вниз)
       y.value += velocityY.value;
 
-      // Плавная прокрутка камеры когда персонаж поднимается высоко
       const SCROLL_THRESHOLD = height * 0.5;
       const targetOffset = Math.max(0, SCROLL_THRESHOLD - y.value);
 
-      // Плавно интерполируем смещение камеры (0.15 = скорость интерполяции)
       cameraOffset.value += (targetOffset - cameraOffset.value) * 0.15;
 
-      // Если камера сместилась, проверяем платформы
       if (cameraOffset.value > 5) {
         platforms.forEach((p) => {
-          // Реальная позиция платформы с учётом смещения
           const realY = p.y.value + cameraOffset.value;
 
-          // Если платформа ушла за нижнюю границу
           if (realY > height + PLATFORM_HEIGHT + 100) {
             createNewPlatform(p);
-            // Корректируем позицию новой платформы с учётом текущего смещения
             p.y.value -= cameraOffset.value;
           }
         });
 
-        // Обновляем счет на основе смещения камеры
         scrollOffset.current = cameraOffset.value;
         setScore(Math.floor(scrollOffset.current / 10));
       }
 
-      // Проверка столкновений - только если падаем И прошло минимум 200ms с последнего прыжка
-      const MIN_JUMP_INTERVAL = 200; // Минимальное время между прыжками в миллисекундах
+      const MIN_JUMP_INTERVAL = 200;
       const canJumpNow = currentTime - lastJumpTime.current > MIN_JUMP_INTERVAL;
 
       if (velocityY.value > 0 && canJumpNow) {
         const doodleBottom = y.value + DOODLE_SIZE;
 
-        // Ищем ближайшую платформу под персонажем
         let closestPlatformIndex: number = -1;
         let closestDistance: number = 999;
 
         platforms.forEach((p, index) => {
           const platformTop = p.y.value;
 
-          // Проверяем, что платформа ниже персонажа
           if (platformTop < doodleBottom - 5) return;
 
-          // Проверяем горизонтальное выравнивание
           const isHorizontallyAligned =
             x.value + DOODLE_SIZE > p.x.value + 15 &&
             x.value < p.x.value + PLATFORM_WIDTH - 15;
@@ -251,14 +224,12 @@ export const GameScreen = () => {
 
           const distance = platformTop - doodleBottom;
 
-          // Обновляем ближайшую платформу если эта ближе
           if (distance >= 0 && distance < 20 && distance < closestDistance) {
             closestPlatformIndex = index;
             closestDistance = distance;
           }
         });
 
-        // Если нашли подходящую платформу - прыгаем
         if (closestPlatformIndex >= 0) {
           const closestPlatform = platforms[closestPlatformIndex];
           lastJumpTime.current = currentTime;
@@ -268,12 +239,10 @@ export const GameScreen = () => {
         }
       }
 
-      // Сбрасываем lastPlatformHit когда летим вверх
       if (velocityY.value < -5) {
         lastPlatformHit.current = null;
       }
 
-      // Game Over - если упали за нижнюю границу
       if (y.value > height + DOODLE_SIZE) {
         gameOver.current = true;
         clearInterval(interval);
@@ -285,7 +254,6 @@ export const GameScreen = () => {
         ]);
       }
 
-      // Старт игры
       if (!started.current && y.value < height - 150) {
         started.current = true;
       }
