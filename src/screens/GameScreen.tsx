@@ -9,28 +9,72 @@ import { Doodle } from "../components/Doodle";
 import { Platform as PlatformComponent } from "../components/Platform";
 import { Score } from "../components/Score";
 import {
+  GRAVITY as BASE_GRAVITY,
+  JUMP_HEIGHT as BASE_JUMP_HEIGHT,
+  MOVE_SPEED as BASE_MOVE_SPEED,
   DOODLE_SIZE,
-  GRAVITY,
   height,
-  JUMP_HEIGHT,
-  MOVE_SPEED,
   PLATFORM_HEIGHT,
   PLATFORM_WIDTH,
   width,
 } from "../constants/config";
 
-// ====== TYPY I STAŁE ======
+// ====== TYPY I KONFIG ======
+
+export type Difficulty = "easy" | "normal" | "hard";
 
 type PlatformData = {
   x: number;
   y: number;
 };
 
-const PLATFORM_COUNT = 20;
-const MAX_DISTANCE = 90;
-const MIN_DISTANCE = 50;
+type DifficultyConfig = {
+  platformCount: number;
+  maxDistance: number;
+  minDistance: number;
+  gravityMultiplier: number;
+  jumpMultiplier: number;
+  moveMultiplier: number;
+};
 
-// ====== POMOCNICZE FUNKCJE ======
+// domyślna konfiguracja, gdy nie ma difficulty (albo jest dziwne)
+const DEFAULT_CONFIG: DifficultyConfig = {
+  platformCount: 20,
+  maxDistance: 90,
+  minDistance: 50,
+  gravityMultiplier: 1,
+  jumpMultiplier: 1,
+  moveMultiplier: 1,
+};
+
+const difficultySettings: Record<Difficulty, DifficultyConfig> = {
+  easy: {
+    platformCount: 25,
+    maxDistance: 80,
+    minDistance: 40,
+    gravityMultiplier: 0.9,
+    jumpMultiplier: 1.05,
+    moveMultiplier: 0.9,
+  },
+  normal: {
+    platformCount: 20,
+    maxDistance: 90,
+    minDistance: 50,
+    gravityMultiplier: 1,
+    jumpMultiplier: 1,
+    moveMultiplier: 1,
+  },
+  hard: {
+    platformCount: 18,
+    maxDistance: 110,
+    minDistance: 60,
+    gravityMultiplier: 1.15,
+    jumpMultiplier: 0.95,
+    moveMultiplier: 1.1,
+  },
+};
+
+// ====== POMOCNICZE FUNKCJE NIEZALEŻNE OD TRUDNOŚCI ======
 
 // losowy X w całej szerokości ekranu (z marginesem)
 const getRandomPlatformX = () => {
@@ -57,56 +101,6 @@ const isTooCloseToOtherPlatforms = (
 
     return dx < minHorizontalGap; // za blisko siebie
   });
-};
-
-// generowanie początkowych platform – naturalny rozkład jak w Doodle Jump
-const createInitialPlatforms = (): PlatformData[] => {
-  const positions: PlatformData[] = [];
-  let currentY = height - 100; // pierwsza platforma przy dole
-
-  for (let i = 0; i < PLATFORM_COUNT; i++) {
-    const y =
-      i === 0
-        ? currentY
-        : (currentY -=
-            Math.random() * (MAX_DISTANCE - MIN_DISTANCE) + MIN_DISTANCE);
-
-    let x = getRandomPlatformX();
-    let attempts = 0;
-
-    while (attempts < 50 && isTooCloseToOtherPlatforms(x, y, positions)) {
-      x = getRandomPlatformX();
-      attempts++;
-    }
-
-    positions.push({ x, y });
-  }
-
-  return positions;
-};
-
-// spawn nowej platformy powyżej najwyższej – też z pilnowaniem odstępów
-const spawnPlatformAbove = (
-  current: PlatformData[],
-  excludeIndex?: number
-): PlatformData => {
-  const filtered =
-    typeof excludeIndex === "number"
-      ? current.filter((_, idx) => idx !== excludeIndex)
-      : current;
-
-  const highestY = Math.min(...filtered.map((p) => p.y));
-  const verticalDistance = Math.random() * 40 + 60; // 60–100 px
-  const newY = highestY - verticalDistance;
-
-  let x = getRandomPlatformX();
-  let attempts = 0;
-  while (attempts < 50 && isTooCloseToOtherPlatforms(x, newY, filtered)) {
-    x = getRandomPlatformX();
-    attempts++;
-  }
-
-  return { x, y: newY };
 };
 
 // ====== KOMPONENT ANIMOWANEJ PLATFORMY ======
@@ -155,15 +149,83 @@ const PlatformAnimated: React.FC<PlatformAnimatedProps> = ({
   );
 };
 
-// ====== GŁÓWNY EKRAN GRY ======
+// ====== GŁÓWNY EKRAN GRY Z TRUDNOŚCIĄ ======
 
-export const GameScreen: React.FC = () => {
-  // Doodle
+type GameScreenProps = {
+  difficulty?: Difficulty; // TERAZ jest opcjonalne
+};
+
+export const GameScreen: React.FC<GameScreenProps> = ({ difficulty }) => {
+  // jeśli nic nie przyszło → "normal"
+  const safeDifficulty: Difficulty = difficulty ?? "normal";
+
+  // bierzemy konfigurację dla danego poziomu albo default
+  const config: DifficultyConfig =
+    difficultySettings[safeDifficulty] ?? DEFAULT_CONFIG;
+
+  // wartości zależne od trudności
+  const PLATFORM_COUNT = config.platformCount;
+  const MAX_DISTANCE = config.maxDistance;
+  const MIN_DISTANCE = config.minDistance;
+  const GRAVITY = BASE_GRAVITY * config.gravityMultiplier;
+  const JUMP_HEIGHT = BASE_JUMP_HEIGHT * config.jumpMultiplier;
+  const MOVE_SPEED = BASE_MOVE_SPEED * config.moveMultiplier;
+
+  // --- generowanie początkowych platform (zależne od trudności) ---
+  const createInitialPlatforms = (): PlatformData[] => {
+    const positions: PlatformData[] = [];
+    let currentY = height - 100; // pierwsza platforma przy dole
+
+    for (let i = 0; i < PLATFORM_COUNT; i++) {
+      const y =
+        i === 0
+          ? currentY
+          : (currentY -=
+              Math.random() * (MAX_DISTANCE - MIN_DISTANCE) + MIN_DISTANCE);
+
+      let x = getRandomPlatformX();
+      let attempts = 0;
+
+      while (attempts < 50 && isTooCloseToOtherPlatforms(x, y, positions)) {
+        x = getRandomPlatformX();
+        attempts++;
+      }
+
+      positions.push({ x, y });
+    }
+
+    return positions;
+  };
+
+  // spawn nowej platformy powyżej najwyższej – też z pilnowaniem odstępów
+  const spawnPlatformAbove = (
+    current: PlatformData[],
+    excludeIndex?: number
+  ): PlatformData => {
+    const filtered =
+      typeof excludeIndex === "number"
+        ? current.filter((_, idx) => idx !== excludeIndex)
+        : current;
+
+    const highestY = Math.min(...filtered.map((p) => p.y));
+    const verticalDistance = Math.random() * 40 + 60; // 60–100 px
+    const newY = highestY - verticalDistance;
+
+    let x = getRandomPlatformX();
+    let attempts = 0;
+    while (attempts < 50 && isTooCloseToOtherPlatforms(x, newY, filtered)) {
+      x = getRandomPlatformX();
+      attempts++;
+    }
+
+    return { x, y: newY };
+  };
+
+  // --- Doodle i stan gry ---
   const x = useSharedValue(width / 2 - DOODLE_SIZE / 2);
   const y = useSharedValue(height - 200);
   const velocityY = useSharedValue(0);
 
-  // kamera & platformy
   const cameraOffset = useSharedValue(0);
   const platforms = useSharedValue<PlatformData[]>(createInitialPlatforms());
 
@@ -216,7 +278,6 @@ export const GameScreen: React.FC = () => {
           const realY = updated[i].y + cameraOffset.value;
 
           if (realY > height + PLATFORM_HEIGHT + 100) {
-            // ta platforma jest daleko poniżej – respawn nad najwyższą
             updated[i] = spawnPlatformAbove(updated, i);
           }
         }
@@ -244,7 +305,7 @@ export const GameScreen: React.FC = () => {
           // platforma musi być pod spodem
           if (platformTop < doodleBottom - 5) continue;
 
-          // ODBIJANIE OD CAŁEJ SZEROKOŚCI PLATFORMY (z małym marginesem)
+          // odbijanie od całej szerokości platformy (z marginesem)
           const isHorizontallyAligned =
             x.value + DOODLE_SIZE > p.x - 5 &&
             x.value < p.x + PLATFORM_WIDTH + 5;
@@ -281,7 +342,7 @@ export const GameScreen: React.FC = () => {
     }, 16);
 
     return () => clearInterval(interval);
-  }, [score]);
+  }, [safeDifficulty, score]); // zależność od bezpiecznej trudności
 
   return (
     <View style={styles.container}>
@@ -302,7 +363,7 @@ export const GameScreen: React.FC = () => {
         />
       ))}
 
-      {/* Sterowanie dotykiem – na laptopie możesz później dodać klawiaturę */}
+      {/* Sterowanie dotykiem */}
       <View
         style={styles.leftControl}
         onTouchStart={() => (moveDirection.current = "left")}
