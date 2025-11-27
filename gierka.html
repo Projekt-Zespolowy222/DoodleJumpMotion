@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Menu gry</title>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const dude = document.querySelector(".dude");
+
+    let y = 0;            // pozycja pionowa
+    let v = 0;            // prędkość
+    let gravity = 0.2;    // siła grawitacji
+    let jumpForce = 25 ;   // siła odbicia
+    let scaleX = 1;
+    let scaleY = 1;
+
+    function animate() {
+        v -= gravity;     // opadanie
+        y += v;           // ruch
+
+        // ODBICIE OD TRAMPOLINY
+        if (y < 0) {
+            y = 0;
+            v = jumpForce;
+
+            // animacja squash przy odbiciu
+            scaleX = 1.2;
+            scaleY = 0.8;
+        }
+
+        // amortyzacja po odbiciu
+        scaleX += (1 - scaleX) * 0.2;
+        scaleY += (1 - scaleY) * 0.2;
+
+        // zastosowanie transformacji
+        dude.style.transform =
+            `translateX(-50%) translateY(${-y}px) scale(${scaleX}, ${scaleY})`;
+
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+});
+
+</script>
+
+
+<style>
+    body {
+        margin: 0;
+        background: #000; /* czarne tło poza obrazem */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    /* KONTENER O STAŁYM ROZMIARZE */
+    .game-screen {
+        position: relative;
+        width: 1920px;   /* TU WSTAW SWOJE DOKŁADNE WYMIARY */
+        height: 2650px;  /* TU WSTAW SWOJE DOKŁADNE WYMIARY */
+        overflow: hidden;
+    }
+
+    /* TŁO MENU */
+    .background {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: url('Menu!!.png') no-repeat center;
+        background-size: cover;
+    }
+
+    /* LUDZIK NA TLE */
+    .dude {
+    position: absolute;
+    width: 500px;
+    left: 27%;
+    transform: translateX(-50%);
+    bottom: 310px;
+    transform-origin: center bottom;
+}
+</style>
+
+</head>
+
+
+<body>
+
+<div class="game-screen">
+    <div class="background"></div>
+    <img src="ludzik.png" class="dude" id="dude">
+</div>
+
+</body>
+</html>
