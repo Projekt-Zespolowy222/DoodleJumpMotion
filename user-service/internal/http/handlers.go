@@ -3,6 +3,7 @@ package http
 import (
 	"doodlejump-backend/user-service/internal/services"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,19 +26,20 @@ func (h *AuthHandler) Register(c *gin.Context) {
         Username string `json:"username"`
         Email    string `json:"email"`
         Password string `json:"password"`
+        Role     string `json:"role"`
     }
     if err := c.ShouldBindJSON(&req); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
 
-    user, err := h.userService.RegisterUser(req.Username, req.Email, req.Password)
+    user, err := h.userService.RegisterUser(req.Username, req.Email, req.Password, req.Role)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
-    token, err := services.GenerateJWT(user.ID, user.Username)
+    token, err := services.GenerateJWT(user.ID, user.Username, user.Role)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
         return
@@ -73,7 +75,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
         return
     }
 
-	token, err := services.GenerateJWT(user.ID, user.Username)
+	token, err := services.GenerateJWT(user.ID, user.Username,  user.Role)
 	if err != nil {
         c.JSON(500, gin.H{"error": "failed to generate token"})
         return
@@ -98,4 +100,27 @@ func ProfileHandler(c *gin.Context) {
 		"user_id":  userID,
 		"username": username,
 	})
+}
+
+func GetUserByIDHandler(userService *services.UserService) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        idParam := c.Param("id")
+        id, err := strconv.ParseInt(idParam, 10, 64)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+            return
+        }
+
+        user, err := userService.GetByID(id)
+        if err != nil {
+            c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+            return
+        }
+
+        c.JSON(http.StatusOK, gin.H{
+            "id":        user.ID,
+            "cup_count": user.CupCount,
+            "role":      user.Role,
+        })
+    }
 }

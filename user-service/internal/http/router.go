@@ -19,6 +19,7 @@ func RegisterRoutes(db *gorm.DB) *gin.Engine {
 	r.GET("/ping", func(c *gin.Context) { c.JSON(200, gin.H{"message": "pong"}) })
 	r.POST("/auth/login", authHandler.Login)
 	r.GET("/profile", AuthMiddleware(), ProfileHandler)
+	r.GET("/users/:id", AuthMiddleware(), GetUserByIDHandler(userService))
 
 	return r
 }

@@ -41,3 +41,12 @@ func (r *UserRepository) GetByEmail(email string) (*domain.User, error) {
     }
     return &user, nil
 }
+
+
+func (r *UserRepository) GetByID(id int64) (*domain.User, error) {
+    var user domain.User
+    if err := r.db.First(&user, id).Error; err != nil {
+        return nil, err
+    }
+    return &user, nil
+}

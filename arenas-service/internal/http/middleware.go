@@ -1,15 +1,31 @@
 package http
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = []byte("supersecretkey")
+var jwtSecret = []byte("supersecretkey") 
+
+func LoggerMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        start := time.Now()
+        c.Next()
+        duration := time.Since(start)
+        log.Printf("[%s] %s %s %d %s",
+            c.Request.Method,
+            c.Request.URL.Path,
+            c.ClientIP(),
+            c.Writer.Status(),
+            duration,
+        )
+    }
+}
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -23,7 +39,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method")
+				return nil, nil
 			}
 			return jwtSecret, nil
 		})
@@ -35,23 +51,21 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		claims := token.Claims.(jwt.MapClaims)
+		c.Set("user_id", int64(claims["user_id"].(float64)))
+		c.Set("role", claims["role"].(string))
 
-		userID := int64(claims["user_id"].(float64))
+		c.Next()
+	}
+}
 
-		username := ""
-		if u, ok := claims["username"].(string); ok {
-    		username = u
+func AdminOnlyMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role := c.GetString("role")
+		if role != "admin" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden: admin only"})
+			c.Abort()
+			return
 		}
-
-		role := "player"
-		if r, ok := claims["role"].(string); ok {
-    		role = r
-		}
-
-		c.Set("user_id", userID)
-		c.Set("username", username)
-		c.Set("role", role)
-
 		c.Next()
 	}
 }

@@ -19,16 +19,21 @@ func NewUserService(repo *repository.UserRepository) *UserService {
 	return &UserService{repo: repo}
 }
 
-func (s *UserService) RegisterUser(username, email, password string) (*domain.User, error) {
+func (s *UserService) RegisterUser(username, email, password, role string) (*domain.User, error) {
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
+	if role != "admin" {
+        role = "player"
+    }
+
 	user := &domain.User{
-		Username:     username,
-		Email:        email,
-		PasswordHash: string(hashedPassword),
-		CupCount:     0,
-		Level:        1,
-	}
+        Username:     username,
+        Email:        email,
+        PasswordHash: string(hashedPassword),
+        Role:         role,
+        CupCount:     0,
+        Level:        1,
+    }
 
 	if err := s.repo.CreateUser(user); err != nil {
 		return nil, err
@@ -41,10 +46,11 @@ func CheckPasswordHash(password, hash string) bool {
     return err == nil
 }
 
-func GenerateJWT(userID int64, username string) (string, error) {
+func GenerateJWT(userID int64, username, role string) (string, error) {
     claims := jwt.MapClaims{
         "user_id":  userID,
         "username": username,
+		"role":     role,
         "exp":      time.Now().Add(time.Hour * 72).Unix(),
     }
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -53,4 +59,7 @@ func GenerateJWT(userID int64, username string) (string, error) {
 
 func (s *UserService) GetByEmail(email string) (*domain.User, error) {
     return s.repo.GetByEmail(email)
+}
+func (s *UserService) GetByID(id int64) (*domain.User, error) {
+    return s.repo.GetByID(id)
 }
