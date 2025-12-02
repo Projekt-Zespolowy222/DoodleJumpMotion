@@ -2,12 +2,13 @@ package routes
 
 import (
 	"session-service/internal/handlers"
+	"session-service/internal/ws"
 
 	"github.com/gin-gonic/gin"
 )
 
 // RegisterRoutes регистрирует все эндпоинты сервиса
-func RegisterRoutes(r *gin.Engine) {
+func RegisterRoutes(r *gin.Engine, hub *ws.Hub) {
     // Пример маршрутов для сессий и матчей
     sessionHandler := handlers.NewSessionHandler()
     matchHandler := handlers.NewMatchHandler()

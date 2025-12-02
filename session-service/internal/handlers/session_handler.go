@@ -8,6 +8,7 @@ import (
 	"session-service/internal/models"
 	"session-service/internal/repositories"
 	"session-service/internal/services"
+	"session-service/internal/ws"
 	"strconv"
 	"time"
 
@@ -16,7 +17,8 @@ import (
 
 type SessionHandler struct {
     service *services.SessionService
-	 userClient *clients.UserClient
+	userClient *clients.UserClient
+	hub     *ws.Hub
 }
 
 func NewSessionHandler() *SessionHandler {
