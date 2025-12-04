@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/binary"
+	"fmt"
 	"net/http"
 	"session-service/internal/clients"
 	"session-service/internal/database"
@@ -35,10 +38,17 @@ func (h *SessionHandler) CreateSession(c *gin.Context) {
         return
     }
 
+    seed, err := GenerateSeed()
+
     session := models.Session{
         Status:       "waiting",
         Player1ID:    input.Player1ID,
 		Player2ID:    input.Player2ID,
+        Seed :         seed,
+    }
+    if err != nil {
+        c.JSON(500, gin.H{"error": "failed to generate seed"})
+        return
     }
 
     if err := h.service.CreateSession(&session); err != nil {
@@ -118,6 +128,30 @@ func (h *SessionHandler) JoinSession(c *gin.Context) {
 	}
 
 	c.JSON(200, session)
+}
+
+func (h *SessionHandler) LeaveSession(c *gin.Context) {
+    var body dto.LeaveSessionDTO
+    if err := c.ShouldBindJSON(&body); err != nil {
+        c.JSON(400, gin.H{"error": err.Error()})
+        return
+    }
+
+    sessionIDStr := c.Param("id")
+    sessionID, _ := strconv.ParseUint(sessionIDStr, 10, 64)
+
+    if err := h.service.LeaveSession(uint(sessionID), body.PlayerID); err != nil {
+        c.JSON(500, gin.H{"error": err.Error()})
+        return
+    }
+
+    if h.hub != nil {
+        msg := fmt.Sprintf("Player %d has left the session", body.PlayerID)
+        h.hub.Broadcast(uint(sessionID), msg)
+        h.hub.Unregister(uint(sessionID), body.PlayerID)
+    }
+
+    c.JSON(200, gin.H{"message": "Player left the session successfully"})
 }
 
 
@@ -220,4 +254,14 @@ func (h *SessionHandler) FinishSession(c *gin.Context) {
 
 func ptrTime(t time.Time) *time.Time {
     return &t
+}
+
+func GenerateSeed() (uint32, error)  {
+    var b [4]byte
+    
+    if _, err := rand.Read(b[:]); err != nil {
+        return 0, err
+    }
+
+    return binary.LittleEndian.Uint32(b[:]), nil
 }

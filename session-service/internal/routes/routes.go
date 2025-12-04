@@ -20,6 +20,7 @@ func RegisterRoutes(r *gin.Engine, hub *ws.Hub) {
         sessionRoutes.GET("/:id", sessionHandler.GetSession)
 		sessionRoutes.PATCH("/:id/join", sessionHandler.JoinSession)
 		sessionRoutes.POST("/:id/finish", sessionHandler.FinishSession)
+        sessionRoutes.POST("/:id/leave", sessionHandler.LeaveSession)
         // Добавишь остальные методы
     }
 

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"session-service/internal/services"
 	"session-service/internal/ws"
@@ -58,19 +57,7 @@ func AuthMiddleware(hub *ws.Hub, sessionService *services.SessionService) gin.Ha
             return
         }
 
-        // UPGRADER !!!
-        conn, err := ws.Upgrader.Upgrade(c.Writer, c.Request, nil)
-        if err != nil {
-            fmt.Println("Upgrade error:", err)
-            return
-        }
-
-        client := &ws.Client{
-            UserID: uint(userID),
-            Conn:   conn,
-            Send:   make(chan []byte),
-        }
-
-        hub.Register(uint(sessionID), client)
+        c.Set("user_id", uint(userID))
+        c.Next()
     }
 }

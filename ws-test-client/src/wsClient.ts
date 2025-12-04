@@ -1,43 +1,57 @@
 import WebSocket from "ws";
 
 export class WSClient {
-  private ws: WebSocket;
-  private userId: number;
-  private sessionId: number;
+  ws: WebSocket;
+  userId: number;
+  sessionId: number;
 
   constructor(url: string, userId: number, sessionId: number, token: string) {
     this.userId = userId;
     this.sessionId = sessionId;
 
-    // Добавляем JWT и session_id в query params
     this.ws = new WebSocket(`${url}?session_id=${sessionId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     this.ws.on("open", () => {
-      console.log(`User ${userId} connected to session ${sessionId}`);
+      console.log(`[INFO] User ${userId} connected to session ${sessionId}`);
+      this.join();
     });
 
     this.ws.on("message", (msg) => {
-      console.log(`User ${userId} received: ${msg.toString()}`);
+      console.log(`[IN] User ${userId} received: ${msg.toString()}`);
     });
 
     this.ws.on("close", () => {
-      console.log(`User ${userId} disconnected`);
+      console.log(`[INFO] User ${userId} disconnected (WS closed)`);
     });
 
     this.ws.on("error", (err) => {
-      console.error(`User ${userId} error:`, err.message);
+      console.error(`[ERROR] User ${userId} error:`, err.message);
     });
+
+    console.log("[DEBUG] NEW WSClient loaded with [IN]/[OUT] logging");
   }
 
-  sendMessage(message: string) {
-    if (this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(message);
-    } else {
-      console.log(`User ${this.userId} cannot send message, WS not open`);
-    }
+  join() {
+    const msg = JSON.stringify({ type: "join", user_id: this.userId });
+    console.log(`[OUT] User ${this.userId} sending: ${msg}`);
+    this.ws.send(msg);
+  }
+
+  sendScore(score: number) {
+    const msg = JSON.stringify({ type: "score", value: score });
+    console.log(`[OUT] User ${this.userId} sending: ${msg}`);
+    this.ws.send(msg);
+  }
+
+  sendDeath() {
+    const msg = JSON.stringify({ type: "player_death", value: this.userId });
+    console.log(`[OUT] User ${this.userId} sending: ${msg}`);
+    this.ws.send(msg);
+  }
+
+  close() {
+    this.ws.close();
   }
 }

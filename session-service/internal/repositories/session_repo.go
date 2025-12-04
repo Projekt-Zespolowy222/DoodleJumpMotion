@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"fmt"
 	"session-service/internal/database"
 	"session-service/internal/models"
 )
@@ -24,5 +25,10 @@ func (r *SessionRepository) GetByID(id uint) (*models.Session, error) {
 }
 
 func (r *SessionRepository) Update(session *models.Session) error {
-	return database.DB.Save(session).Error
+    fmt.Printf("[REPO SAVE] Saving session %d: Player1Death='%s', Player2Death='%s'\n", session.ID, session.Player1Death, session.Player2Death)
+    err := database.DB.Save(session).Error
+    if err != nil {
+        fmt.Printf("[REPO SAVE] Error saving session: %v\n", err)
+    }
+    return err
 }

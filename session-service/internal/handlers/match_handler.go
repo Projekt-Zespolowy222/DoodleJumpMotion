@@ -61,3 +61,22 @@ func (h *MatchHandler) GetMatch(c *gin.Context) {
 
 	c.JSON(http.StatusOK, match)
 }
+
+func (h *MatchHandler) CreateMatchDirect(dto dto.CreateMatchDTO) (*models.MatchResult, error) {
+    match := models.MatchResult{
+        SessionID:     dto.SessionID,
+        Player1ID:     dto.Player1ID,
+        Player2ID:     dto.Player2ID,
+        Player1Score:  dto.Player1Score,
+        Player2Score:  dto.Player2Score,
+        Player1CupDiff: dto.Player1CupDiff,
+        Player2CupDiff: dto.Player2CupDiff,
+        WinnerID:      dto.WinnerID,
+        PlayedAt:      time.Now(),
+    }
+
+    if err := database.DB.Create(&match).Error; err != nil {
+        return nil, err
+    }
+    return &match, nil
+}

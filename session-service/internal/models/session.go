@@ -17,8 +17,8 @@ type Session struct {
 	Player1Score int
 	Player2Score int
 
-	Player1Death string
-	Player2Death string
+	Player1Death string `gorm:"column:player1_death"` 
+    Player2Death string `gorm:"column:player2_death"`
 
 	Player1JoinedAt *time.Time
 	Player2JoinedAt *time.Time
@@ -26,4 +26,6 @@ type Session struct {
 	Player2LeftAt   *time.Time
 
 	WinnerID *uint // null = draw
+
+	Seed uint32
 }

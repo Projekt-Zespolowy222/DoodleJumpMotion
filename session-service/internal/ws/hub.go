@@ -1,6 +1,9 @@
 package ws
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 // Hub хранит все комнаты и клиентов
 type Hub struct {
@@ -21,6 +24,9 @@ func (h *Hub) Register(sessionID uint, client *Client) {
 	if h.rooms[sessionID] == nil {
 		h.rooms[sessionID] = make(map[uint]*Client)
 	}
+	if h.rooms[sessionID] == nil {
+        h.rooms[sessionID] = make(map[uint]*Client)
+    }
 	h.rooms[sessionID][client.UserID] = client
 }
 
@@ -42,6 +48,7 @@ func (h *Hub) Broadcast(sessionID uint, msg string) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if room, ok := h.rooms[sessionID]; ok {
+		fmt.Printf("[HUB] Broadcasting to session %d: %s\n", sessionID, msg)
 		for _, client := range room {
 			client.Send <- []byte(msg)
 		}
@@ -51,9 +58,20 @@ func (h *Hub) Broadcast(sessionID uint, msg string) {
 func (h *Hub) SendMessageToUser(sessionID uint, userID uint, msg string) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	if room, ok := h.rooms[sessionID]; ok {
-		if client, ok := room[userID]; ok {
-			client.Send <- []byte(msg)
-		}
-	}
+	if client, ok := h.rooms[sessionID][userID]; ok {
+        client.Send <- []byte(msg)
+    }
+}
+
+func (h *Hub) SendTo(sessionID, userID uint, msg []byte) {
+    h.mu.RLock()
+    defer h.mu.RUnlock()
+    if clients, ok := h.rooms[sessionID]; ok {
+        if client, exists := clients[userID]; exists {
+            select {
+            case client.Send <- msg:
+            default:
+            }
+        }
+    }
 }

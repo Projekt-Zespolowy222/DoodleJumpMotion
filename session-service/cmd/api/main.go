@@ -4,6 +4,7 @@ import (
 	"log"
 	"session-service/config"
 	"session-service/internal/database"
+	"session-service/internal/handlers"
 	"session-service/internal/middleware"
 	"session-service/internal/repositories"
 	"session-service/internal/routes"
@@ -23,10 +24,12 @@ func main() {
 	hub := ws.NewHub()
 	repo := repositories.NewSessionRepository()
 	sessionService := services.NewSessionService(repo)
+	matchHandler := handlers.NewMatchHandler()
+
 
 	routes.RegisterRoutes(r, hub)
 
-	r.GET("/ws", middleware.AuthMiddleware(hub, sessionService), ws.WSHandler(hub, sessionService))
+	r.GET("/ws", middleware.AuthMiddleware(hub, sessionService), ws.WSHandler(hub, sessionService, matchHandler))
 
 	log.Println("🚀 Session Service running on port " + cfg.AppPort)
 	r.Run(":" + cfg.AppPort)

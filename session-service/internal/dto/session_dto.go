@@ -13,3 +13,7 @@ type FinishSessionDTO struct {
 	Player1Score int `json:"player1_score" binding:"required"`
 	Player2Score int `json:"player2_score" binding:"required"`
 }
+
+type LeaveSessionDTO struct {
+	PlayerID uint `json:"player_id" binding:"required"`
+}

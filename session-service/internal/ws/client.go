@@ -8,4 +8,5 @@ type Client struct {
 	UserID uint
 	Conn   *websocket.Conn
 	Send   chan []byte
+	SessionID uint
 }
