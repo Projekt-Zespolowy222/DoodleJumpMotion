@@ -1,0 +1,24 @@
+/* 1. html и body должны быть на всю высоту окна */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* 2. hero занимает всю высоту (или почти всю, если хочешь отступ сверху/снизу) */
+.hero {
+  height: 90vh; /* 90% высоты экрана */
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 3. iframe растягивается на весь контейнер */
+.hero iframe {
+  width: 100%;
+  height: 100%;
+  border: none; /* без рамки */
+}

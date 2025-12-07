@@ -1,129 +1,54 @@
 <!DOCTYPE html>
 <html lang="pl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Doodle Jump Motion</title>
-
-  <!-- Google Fonts (Inter) -->
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- główny CSS -->
-  <link rel="stylesheet" href="style.css">
-
-  <!-- STYLE GRY -->
-  <style>
-      body {
-          margin: 0;
-      }
-
-      /* Kontener gry na środku */
-      .game-screen {
-    position: relative;
-    height: 80vh;              /* gra zajmuje 80% ekranu */
-    width: calc(80vh * 0.7);   /* proporcja 0.7 daje pionowy wygląd bez przewijania */
-    max-width: 500px;          /* ograniczenie na szerokich monitorach */
-    overflow: hidden;
-    margin: 40px auto;
-    border-radius: 20px;
-    box-shadow: 0 0 60px rgba(0,0,0,0.25);
-}
-      .background {
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          background: url('img/Menu!!.png') no-repeat center;
-          background-size: cover;
-      }
-
-      .dude {
-          position: absolute;
-          width: 180px;
-          left: 25%;
-          transform: translateX(-50%);
-          bottom: 150px;
-          transform-origin: center bottom;
-      }
-  </style>
-</head>
-
-<body>
-
-  <!-- HEADER -->
-  <header class="site-header">
-    <div class="container header-inner">
-      <div class="logo">
-        <img src="logo.png" alt="Doodle Jump Motion" />
-        <div class="brand">
-          <div class="brand-title">Doodle Jump Motion</div>
-          <div class="brand-sub">Futurystyczna wersja Doodle Jump</div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Doodle Jump Motion</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="scripts/index.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <div class="logo">
+          <img src="logo.png" alt="Doodle Jump Motion" />
+          <div class="brand">
+            <div class="brand-title">Doodle Jump Motion</div>
+            <div class="brand-sub">Futurystyczna wersja Doodle Jump</div>
+          </div>
         </div>
+
+        <nav class="main-nav">
+          <a href="game.html">Zagraj</a>
+          <a href="login.html">Logowanie</a>
+          <a href="register.html">Rejestracja</a>
+          <a href="ranking.html">Ranking</a>
+        </nav>
       </div>
+    </header>
 
-      <nav class="main-nav">
-        <a href="game.html">Zagraj</a>
-        <a href="login.html">Logowanie</a>
-        <a href="register.html">Rejestracja</a>
-        <a href="ranking.html">Ranking</a>
-      </nav>
-    </div>
-  </header>
+    <main class="container">
+      <section class="hero">
+        <h1>Wskocz do gry przyszłości</h1>
+        <p>
+          Steruj swoją postacią za pomocą ruchu ciała dzięki kamerze!
+          Futurystyczna odsłona klasycznego Doodle Jump.
+        </p>
+        <div id="user-info">
+          <!-- Здесь будут данные пользователя -->
+        </div>
 
-  <!-- GŁÓWNA CZĘŚĆ STRONY -->
-  <main class="container">
-    <section class="hero" style="padding: 0; text-align: center;">
-      
-      <div class="game-screen">
-          <div class="background"></div>
-          <img src="img/ludzik.png" class="dude" id="dude">
-      </div>
+        <div id="auth-error" style="color: red; display: none">
+          Nie udało się pobrać danych użytkownika.
+          <a href="login.html">Zaloguj się ponownie</a>
+        </div>
 
-    </section>
-  </main>
+        <a class="btn-primary" href="game.html">Rozpocznij grę</a>
+      </section>
+    </main>
 
-  <!-- STOPKA -->
-  <footer class="site-footer">
-    <div class="container">
-      © 2025 Doodle Jump Motion
-    </div>
-  </footer>
-
-  <!-- SCRIPT GRY -->
-  <script>
-  document.addEventListener("DOMContentLoaded", () => {
-      const dude = document.querySelector(".dude");
-
-      let y = 0;
-      let v = 0;
-      let gravity = 0.2;
-      let jumpForce = 8;
-      let scaleX = 1;
-      let scaleY = 1;
-
-      function animate() {
-          v -= gravity;
-          y += v;
-
-          if (y < 0) {
-              y = 0;
-              v = jumpForce;
-              scaleX = 1.2;
-              scaleY = 0.8;
-          }
-
-          scaleX += (1 - scaleX) * 0.2;
-          scaleY += (1 - scaleY) * 0.2;
-
-          dude.style.transform =
-              `translateX(-50%) translateY(${-y}px) scale(${scaleX}, ${scaleY})`;
-
-          requestAnimationFrame(animate);
-      }
-
-      animate();
-  });
-  </script>
-
-</body>
+    <footer class="site-footer">
+      <div class="container">© 2025 Doodle Jump Motion</div>
+    </footer>
+  </body>
 </html>

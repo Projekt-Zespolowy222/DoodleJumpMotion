@@ -1,16 +1,22 @@
 <!DOCTYPE html>
 <html lang="pl">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Gra – Doodle Jump Motion</title>
-<link rel="stylesheet" href="style.css" />
-<script src="script.js" defer></script>
-</head>
-<body>
-<section class="hero">
-<h1>Ładowanie gry...</h1>
-<p>Tu zostanie podpięta gra sterowana kamerą.</p>
-</section>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gra – Doodle Jump Motion</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style/gameFrame.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <!-- iframe на локальный Expo Web -->
+    <iframe
+      src="http://localhost:8079"
+      width="100%"
+      height="100%"
+      allow="camera; microphone; autoplay; fullscreen"
+    >
+    </iframe>
+    <script type="module" src="scripts/gameShell.js"></script>
+  </body>
 </html>

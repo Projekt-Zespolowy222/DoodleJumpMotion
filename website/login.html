@@ -1,19 +1,39 @@
 <!DOCTYPE html>
 <html lang="pl">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Logowanie – Doodle Jump Motion</title>
-<link rel="stylesheet" href="style.css" />
-</head>
-<body>
-<section class="hero">
-<h1>Logowanie</h1>
-<form>
-<input type="text" placeholder="Login" required />
-<input type="password" placeholder="Hasło" required />
-<button class="btn-primary" type="submit">Zaloguj</button>
-</form>
-</section>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Logowanie – Doodle Jump Motion</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <section class="hero">
+      <h1>Logowanie</h1>
+      <form id="loginForm">
+        <input type="email" id="email" placeholder="Email" required />
+        <input type="password" id="password" placeholder="Hasło" required />
+        <button class="btn-primary" type="submit">Zaloguj</button>
+      </form>
+
+      <script src="scripts/login.js" defer></script>
+      <script>
+        document.getElementById("loginForm").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+          login(email, password);
+        });
+      </script>
+
+      <button id="logoutBtn" class="btn-primary">Wyloguj</button>
+      <script>
+        const logoutBtn = document.getElementById("logoutBtn");
+        logoutBtn.addEventListener("click", () => {
+          localStorage.removeItem("jwt");
+          localStorage.removeItem("user");
+          window.location.href = "login.html";
+        });
+      </script>
+    </section>
+  </body>
 </html>
