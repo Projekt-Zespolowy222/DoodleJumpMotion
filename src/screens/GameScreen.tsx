@@ -19,18 +19,38 @@ import {
   width,
 } from "../constants/config";
 import { usePose } from "../contexts/PoseContext";
+import { publishDeath, publishScore } from "../contexts/SeedModule";
 import { usePoseLandmarker } from "../hooks/usePoseLandmarker";
+import { useSeededPlatforms } from "../hooks/useSeededPlatforms";
+import { SeededRandom } from "../utils/SeededRandom";
 
 interface PlatformType {
   x: SharedValue<number>;
   y: SharedValue<number>;
 }
 
+//const SEED = 1792108570;
+// const SEED = (window as any).GAME_SEED ?? 0;
+// const userId = (window as any).USER_ID ?? 0;
+
 export const GameScreen = () => {
+  const [seed, setSeed] = useState(0);
+  const [userId, setUserId] = useState(0);
+
+  useEffect(() => {
+    // выполнится ТОЛЬКО в браузере
+    setSeed((window as any).GAME_SEED ?? 0);
+    setUserId((window as any).USER_ID ?? 0);
+  }, []);
+  const seedRef = useRef(seed); // текущий seed
+  const rndRef = useRef(new SeededRandom(seed));
   const PLATFORM_COUNT = 20;
 
+  const platformPositions = useSeededPlatforms(seed);
+
   const x = useSharedValue(width / 2 - DOODLE_SIZE / 2);
-  const y = useSharedValue(height - 200);
+  const y = useSharedValue(platformPositions[0].y - DOODLE_SIZE - 2);
+
   const velocityY = useSharedValue(0);
 
   const [score, setScore] = useState(0);
@@ -87,7 +107,6 @@ export const GameScreen = () => {
     };
   }, []);
 
-  // Управление движением через камеру
   useEffect(() => {
     if (torsoCoords.x === 0 && torsoCoords.y === 0) {
       moveDirection.current = null;
@@ -97,7 +116,6 @@ export const GameScreen = () => {
     const centerX = 0.5;
     const deadZone = 0.15;
 
-    // ПРАВИЛЬНАЯ логика:
     if (torsoCoords.x < centerX - deadZone) {
       moveDirection.current = "right";
     } else if (torsoCoords.x > centerX + deadZone) {
@@ -107,9 +125,7 @@ export const GameScreen = () => {
     }
   }, [torsoCoords.x, torsoCoords.y]);
 
-  // Обработка прыжка через камеру
   useEffect(() => {
-    // Игнорируем нулевые координаты (камера еще не инициализирована)
     if (torsoCoords.x === 0 && torsoCoords.y === 0) {
       return;
     }
@@ -118,12 +134,10 @@ export const GameScreen = () => {
       const currentTime = Date.now();
       const MIN_JUMP_INTERVAL = 400;
 
-      // Прыгаем только если стоим на платформе
       if (
         currentTime - lastJumpTime.current > MIN_JUMP_INTERVAL &&
         isOnPlatform.current
       ) {
-        // Высота прыжка зависит от поднятия торса
         const jumpStrength = Math.min(
           1.5,
           1 + Math.max(0, 0.5 - torsoCoords.y) * 2
@@ -137,36 +151,38 @@ export const GameScreen = () => {
     }
   }, [isJumping, torsoCoords.y, torsoCoords.x]);
 
-  const platformPositions = useMemo(() => {
-    const positions: { x: number; y: number }[] = [];
-    const MAX_DISTANCE = 90;
-    const MIN_DISTANCE = 50;
+  // const platformPositions = useMemo(() => {
+  //   const positions: { x: number; y: number }[] = [];
+  //   const MAX_DISTANCE = 90;
+  //   const MIN_DISTANCE = 50;
 
-    const startPlatformY = height - 100;
-    const startPlatformX = width / 2 - PLATFORM_WIDTH / 2;
+  //   const startPlatformY = height - 100;
+  //   const startPlatformX = width / 2 - PLATFORM_WIDTH / 2;
 
-    positions.push({
-      x: startPlatformX,
-      y: startPlatformY,
-    });
+  //   positions.push({
+  //     x: startPlatformX,
+  //     y: startPlatformY,
+  //   });
 
-    let currentY =
-      startPlatformY -
-      (Math.random() * (MAX_DISTANCE - MIN_DISTANCE) + MIN_DISTANCE);
+  //   let currentY =
+  //     startPlatformY -
+  //     (Math.random() * (MAX_DISTANCE - MIN_DISTANCE) + MIN_DISTANCE);
 
-    for (let i = 1; i < PLATFORM_COUNT; i++) {
-      const platformX = Math.random() * (width - PLATFORM_WIDTH - 40) + 20;
+  //   for (let i = 1; i < PLATFORM_COUNT; i++) {
+  //     const platformX = Math.random() * (width - PLATFORM_WIDTH - 40) + 20;
 
-      positions.push({
-        x: platformX,
-        y: currentY,
-      });
+  //     positions.push({
+  //       x: platformX,
+  //       y: currentY,
+  //     });
 
-      currentY -= Math.random() * (MAX_DISTANCE - MIN_DISTANCE) + MIN_DISTANCE;
-    }
+  //     currentY -= Math.random() * (MAX_DISTANCE - MIN_DISTANCE) + MIN_DISTANCE;
+  //   }
 
-    return positions;
-  }, []);
+  //   return positions;
+  // }, []);
+
+  //const platformPositions = useSeededPlatforms(SEED);
 
   // Создаем shared values для всех 20 платформ
   const platform0X = useSharedValue(platformPositions[0].x);
@@ -298,10 +314,10 @@ export const GameScreen = () => {
   const createNewPlatform = (platform: PlatformType) => {
     const highestY = Math.min(...platforms.map((p) => p.y.value));
 
-    const verticalDistance = Math.random() * 40 + 60;
+    const verticalDistance = rndRef.current.range(60, 100); // 60-100 вместо 40-60
     const newY = highestY - verticalDistance;
 
-    const newX = Math.random() * (width - PLATFORM_WIDTH - 60) + 30;
+    const newX = rndRef.current.range(30, width - PLATFORM_WIDTH - 30);
 
     platform.y.value = newY;
     platform.x.value = newX;
@@ -338,7 +354,11 @@ export const GameScreen = () => {
           }
         });
         scrollOffset.current = cameraOffset.value;
-        setScore(Math.floor(scrollOffset.current / 10));
+        const newScore = Math.floor(scrollOffset.current / 10);
+        if (newScore !== score) {
+          setScore(newScore);
+          publishScore(newScore); // ← отправили один раз
+        }
       }
 
       // === Логика приземления (БЕЗ автоматического прыжка) ===
@@ -389,25 +409,27 @@ export const GameScreen = () => {
         isOnPlatform.current = false;
       }
 
+      if (!started.current && y.value < height - 150) {
+        started.current = true;
+      }
       // === Game Over проверка ===
       if (y.value > height + DOODLE_SIZE) {
         gameOver.current = true;
         clearInterval(interval);
+        publishDeath(userId); // ← новая строка
         Alert.alert("Game Over", `Your score: ${score}`, [
-          {
-            text: "OK",
-            onPress: () => {},
-          },
+          { text: "OK", onPress: () => {} },
         ]);
-      }
-
-      if (!started.current && y.value < height - 150) {
-        started.current = true;
       }
     }, 16);
 
     return () => clearInterval(interval);
   }, [platforms, score]);
+
+  useEffect(() => {
+    seedRef.current = seed;
+    rndRef.current = new SeededRandom(seed);
+  }, [seed]);
 
   return (
     <View style={styles.container}>
