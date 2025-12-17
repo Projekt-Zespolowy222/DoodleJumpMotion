@@ -4,11 +4,13 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+
   nats:
     image: nats:alpine
     ports:
       - "4222:4222"
       - "8222:8222"
+
   matchmaker:
     build: .
     ports:

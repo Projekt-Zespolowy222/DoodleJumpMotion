@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"log"
+	"matchmaking-service/internal/clients"
 	"matchmaking-service/internal/dto"
 	"matchmaking-service/internal/utils"
 	"strconv"
@@ -12,10 +13,15 @@ import (
 type ScannerService struct {
 	qs    *QueueService
 	natsP *NatsPublisher
+	sessCli *clients.SessionClient
 }
 
-func NewScannerService(qs *QueueService, natsP *NatsPublisher) *ScannerService {
-	return &ScannerService{qs: qs, natsP: natsP}
+type StatusHandler struct {
+	qs *QueueService
+}
+
+func NewScannerService(qs *QueueService, natsP *NatsPublisher, sessCli *clients.SessionClient) *ScannerService {
+	return &ScannerService{qs: qs, natsP: natsP, sessCli: sessCli}
 }
 
 func (s *ScannerService) Start(ctx context.Context) {
@@ -39,6 +45,25 @@ func (s *ScannerService) Start(ctx context.Context) {
 						}
 						if err := s.natsP.PublishMatchFound(ev); err == nil {
 							log.Printf("matched p%d vs p%d in arena %d", p1ID, p2ID, arena)
+
+							sessID, seed, err := s.sessCli.CreateSession(ctx, p1ID, p2ID)
+							log.Printf("[TEST SESSION PARAM] sessID: %d, seed: %d for p1ID=%d and p2ID=%d", sessID, seed, p1ID, p2ID)
+							if err != nil {
+								log.Printf("session create failed: %v", err)
+								continue
+							}
+
+							log.Printf("SetSession %s %d %d", pair[0], sessID, seed)
+							log.Printf("SetSession %s %d %d", pair[1], sessID, seed)
+							reqID1 := utils.ParseRequestID(pair[0])
+							reqID2 := utils.ParseRequestID(pair[1])
+							
+							log.Printf("[DEBUG] Before SetSession: looking for requestID=%s", reqID1)
+							s.qs.SetSession(reqID1, sessID, seed) 
+							
+							log.Printf("[DEBUG] Before SetSession: looking for requestID=%s", reqID2)
+							s.qs.SetSession(reqID2, sessID, seed)
+							log.Printf("[DEBUG] After SetSession: both called")
 						}
 					}
 				}

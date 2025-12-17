@@ -10,6 +10,7 @@ import (
 	"matchmaking-service/internal/routes"
 	"matchmaking-service/internal/services"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,14 +24,22 @@ func main() {
 	qs := services.NewQueueService(qr)
 	nP := services.NewNatsPublisher(nc)
 	eh := handlers.NewEnqueueHandler(qs)
-	sc := services.NewScannerService(qs, nP)
+	sh := handlers.NewStatusHandler(qs)
+	sc := services.NewScannerService(qs, nP, clients.NewSessionClient(cfg))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go sc.Start(ctx)
 
 	r := gin.Default()
-	routes.Setup(r, eh)
+	r.Use(cors.New(cors.Config{
+	AllowOrigins:     []string{"*"},
+	AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+	ExposeHeaders:    []string{"Content-Length"},
+	AllowCredentials: true,
+	}))
+	routes.Setup(r, eh, sh)
 
 	log.Println("matchmaker on :8084")
 	r.Run(":" + cfg.AppPort)

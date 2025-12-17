@@ -13,6 +13,8 @@ type Config struct {
 	RedisDB       int
 	NatsURL      string
 	JWTSecret     string
+	JWTAdmin     string
+	SessionURL string
 }
 
 func Load() *Config { 
@@ -25,6 +27,8 @@ func Load() *Config {
 		RedisDB: 0,
 		NatsURL:   getEnv("NATS_URL", "nats://localhost:4222"),
 		JWTSecret: getEnv("JWT_SECRET", "supersecret"),
+		JWTAdmin: getEnv("JWT_ADMIN", ""),
+		SessionURL: getEnv("SESSION_URL", "http://localhost:8083/sessions/"),
 	}
 }
 
