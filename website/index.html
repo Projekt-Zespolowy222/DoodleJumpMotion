@@ -98,11 +98,10 @@
         const st = await r.json();
         if (st.status === "found") {
           clearInterval(pollInterval);
-          document.getElementById("matchStatus").innerText = "Соперник найден!";
+          document.getElementById("matchStatus").innerText =
+            "Rywal znaleziony!";
           document.getElementById("connectBtn").style.display = "inline-block";
-          // прячем кнопку «Играть»
           document.getElementById("findMatchBtn").style.display = "none";
-          // кладём параметры в дата-атрибуты кнопки
           document.getElementById("connectBtn").dataset.seed = st.seed;
           document.getElementById("connectBtn").dataset.sid = st.session_id;
         }
