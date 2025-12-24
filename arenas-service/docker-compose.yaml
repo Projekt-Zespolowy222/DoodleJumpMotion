@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: daniil
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: arenas_service_db_doodleJumpMotion
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - app_net
+
+  user-service:
+    build: ../user-service # путь к директории user-service
+    container_name: user-service
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: daniil
+      DB_PASSWORD: admin
+      DB_NAME: user_service_db # своя БД, если нужна
+    depends_on:
+      - postgres
+    networks:
+      - app_net
+
+  arenas-service:
+    build: .
+    container_name: arenas-service
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: daniil
+      DB_PASSWORD: admin
+      DB_NAME: arenas_service_db_doodleJumpMotion
+      USER_SERVICE_URL: http://user-service:8080 # ← вот тут
+    depends_on:
+      - postgres
+      - user-service
+    networks:
+      - app_net
+
+volumes:
+  pg_data:
+
+networks:
+  app_net:
+    driver: bridge

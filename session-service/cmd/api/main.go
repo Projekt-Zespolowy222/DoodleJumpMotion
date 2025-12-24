@@ -1,0 +1,51 @@
+package main
+
+import (
+	"log"
+	"session-service/config"
+	"session-service/internal/database"
+	"session-service/internal/handlers"
+	"session-service/internal/middleware"
+	"session-service/internal/repositories"
+	"session-service/internal/routes"
+	"session-service/internal/services"
+	"session-service/internal/ws"
+	"time"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+)
+
+func main() {
+	cfg := config.LoadConfig()
+
+	database.Connect(cfg)
+
+	r := gin.Default()
+
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			"http://127.0.0.1:5500", // frontend
+			"http://localhost:8079", // Expo Web
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
+	hub := ws.NewHub()
+	repo := repositories.NewSessionRepository()
+	sessionService := services.NewSessionService(repo)
+	matchHandler := handlers.NewMatchHandler()
+
+
+	routes.RegisterRoutes(r, hub)
+
+	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
+	r.GET("/ws", middleware.AuthMiddleware(hub, sessionService), ws.WSHandler(hub, sessionService, matchHandler))
+
+	log.Println("🚀 Session Service running on port " + cfg.AppPort)
+	r.Run(":" + cfg.AppPort)
+}

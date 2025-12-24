@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: doodle_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: user_service_db_doodleJumpMotion
+      POSTGRES_USER: Daniil
+      POSTGRES_PASSWORD: Admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  user-service:
+    build: .
+    container_name: doodle_user_service
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: Daniil
+      DB_PASSWORD: Admin
+      DB_NAME: user_service_db_doodleJumpMotion
+      INTERNAL_API_TOKEN: super_secret_token_123
+    ports:
+      - "8080:8080"
+
+volumes:
+  pg_data:

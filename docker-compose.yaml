@@ -1,0 +1,294 @@
+version: "3.9"
+
+networks:
+  doodle_net:
+    name: doodle_net
+    driver: bridge
+
+volumes:
+  pg_user_data:
+  pg_arenas_data:
+  pg_session_data:
+  pg_matchmaker_data:
+
+services:
+  # --------------- user-db ---------------
+  postgres-user:
+    image: postgres:16-alpine
+    container_name: doodle_postgres_user
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: daniil
+      POSTGRES_PASSWORD: Admin
+      POSTGRES_DB: user_service_db_doodleJumpMotion
+    ports:
+      - "5436:5432"
+    volumes:
+      - pg_user_data:/var/lib/postgresql/data
+    networks:
+      - doodle_net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U daniil -d user_service_db_doodleJumpMotion",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --------------- arenas-db ---------------
+  postgres-arenas:
+    image: postgres:16-alpine
+    container_name: doodle_postgres_arenas
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: daniil
+      POSTGRES_PASSWORD: Admin
+      POSTGRES_DB: arenas_service_db_doodleJumpMotion
+    ports:
+      - "5437:5432" # хост:5433 → контейнер:5432
+    volumes:
+      - pg_arenas_data:/var/lib/postgresql/data
+    networks:
+      - doodle_net
+
+  # --------------- session-db ---------------
+  postgres-session:
+    image: postgres:16-alpine
+    container_name: doodle_postgres_session
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: daniil
+      POSTGRES_PASSWORD: Admin
+      POSTGRES_DB: sessions_service_db_doodleJumpMotion
+    ports:
+      - "5438:5432"
+    volumes:
+      - pg_session_data:/var/lib/postgresql/data
+    networks:
+      - doodle_net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U daniil -d sessions_service_db_doodleJumpMotion",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --------------- matchmaker-db ---------------
+  postgres-matchmaker:
+    image: postgres:16-alpine
+    container_name: doodle_postgres_matchmaker
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: daniil
+      POSTGRES_PASSWORD: Admin
+      POSTGRES_DB: matchmaker_service_db_doodleJumpMotion
+    ports:
+      - "5439:5432"
+    volumes:
+      - pg_matchmaker_data:/var/lib/postgresql/data
+    networks:
+      - doodle_net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U daniil -d matchmaker_service_db_doodleJumpMotion",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --------------- redis ---------------
+  redis:
+    image: redis:7-alpine
+    container_name: doodle_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - doodle_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # --------------- nats ---------------
+  nats:
+    image: nats:alpine
+    container_name: doodle_nats
+    restart: unless-stopped
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    networks:
+      - doodle_net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8222/healthz",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # --------------- user-service ---------------
+  user-service:
+    build: ./user-service
+    container_name: doodle_user_service
+    restart: unless-stopped
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres-user
+      DB_PORT: 5432
+      DB_USER: daniil
+      DB_PASSWORD: Admin
+      DB_NAME: user_service_db_doodleJumpMotion
+      INTERNAL_API_TOKEN: super_secret_token_123
+    ports:
+      - "8085:8080"
+    networks:
+      - doodle_net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # --------------- arenas-service ---------------
+  arenas-service:
+    build: ./arenas-service
+    container_name: doodle_arenas_service
+    restart: unless-stopped
+    depends_on:
+      - postgres-arenas
+      - user-service
+    env_file:
+      - ./arenas-service/.env # USER_SERVICE_URL=http://doodle_user_service:8080
+    environment:
+      DB_HOST: postgres-arenas
+      DB_PORT: 5432
+      DB_USER: daniil
+      DB_PASSWORD: Admin
+      DB_NAME: arenas_service_db_doodleJumpMotion
+    ports:
+      - "8086:8081"
+    networks:
+      - doodle_net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8081/arena/0",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --------------- session-service ---------------
+  session-service:
+    build: ./session-service
+    container_name: doodle_session_service
+    restart: unless-stopped
+    depends_on:
+      postgres-session:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    env_file:
+      - ./session-service/.env
+    environment:
+      DB_HOST: postgres-session
+      DB_PORT: 5432
+      DB_USER: daniil
+      DB_PASSWORD: Admin
+      DB_NAME: sessions_service_db_doodleJumpMotion
+      DB_SSLMODE: disable
+      USER_SERVICE_URL: http://doodle_user_service:8080
+    ports:
+      - "8087:8083"
+    networks:
+      - doodle_net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8083/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # --------------- matchmaker ---------------
+  matchmaker:
+    build: ./matchmaking-service
+    container_name: doodle_matchmaker
+    restart: unless-stopped
+    depends_on:
+      postgres-matchmaker:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nats:
+        condition: service_started
+      session-service:
+        condition: service_healthy
+    env_file:
+      - ./matchmaking-service/.env
+    environment:
+      DB_HOST: postgres-matchmaker
+      DB_PORT: 5432
+      DB_USER: daniil
+      DB_PASSWORD: Admin
+      DB_NAME: matchmaker_service_db_doodleJumpMotion
+      REDIS_ADDR: redis:6379
+      NATS_URL: nats://nats:4222
+      SESSION_URL: http://session-service:8083/sessions/
+    ports:
+      - "8088:8084"
+    networks:
+      - doodle_net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8084/enqueue",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
