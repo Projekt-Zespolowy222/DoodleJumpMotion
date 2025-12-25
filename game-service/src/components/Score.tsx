@@ -6,7 +6,12 @@ interface ScoreProps {
   y: number; // текущий счет
 }
 
-const fontFamily = RNPlatform.select({ ios: "Helvetica", default: "serif" });
+const fontFamily = RNPlatform.select({
+  ios: "Helvetica",
+  android: "sans-serif",
+  web: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  default: "sans-serif",
+});
 
 export const Score: React.FC<ScoreProps> = ({ y }) => {
   return <Text style={styles.score}>Score: {y}</Text>;

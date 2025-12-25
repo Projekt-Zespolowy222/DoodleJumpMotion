@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Doodle Jump Motion</title>
     <link rel="stylesheet" href="style.css" />
+    <script src="config.js?v=2"></script>
     <script src="scripts/index.js" defer></script>
   </head>
   <body>
@@ -61,8 +62,8 @@
   </body>
 
   <script>
-    const MM_URL = "http://localhost:8084"; // matchmaker
-    const USER_URL = "http://localhost:8080"; // user-service (для JWT)
+    const MM_URL = "http://localhost:8088"; // matchmaker
+    const USER_URL = "http://localhost:8085"; // user-service (для JWT)
 
     const token = localStorage.getItem("jwt"); // после логина сохраняете туда же
     let pollInterval;

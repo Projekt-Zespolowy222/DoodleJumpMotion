@@ -86,7 +86,7 @@ async function connectToReadySession() {
 
   // 3. прокси postMessage от игры
   window.addEventListener("message", (e) => {
-    if (e.origin !== window.ENC.GAME_DEV_URL) return;
+    if (e.origin !== window.ENV.GAME_DEV_URL) return;
     const { type, value } = e.data;
     if (type === "score") sendScore(value);
     if (type === "death") sendDeath(value);

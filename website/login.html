@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Logowanie – Doodle Jump Motion</title>
     <link rel="stylesheet" href="style.css" />
+    <script src="config.js?v=2"></script>
+    <script src="scripts/login.js" defer></script>
   </head>
   <body>
     <section class="hero">
@@ -15,25 +17,7 @@
         <button class="btn-primary" type="submit">Zaloguj</button>
       </form>
 
-      <script src="scripts/login.js" defer></script>
-      <script>
-        document.getElementById("loginForm").addEventListener("submit", (e) => {
-          e.preventDefault();
-          const email = document.getElementById("email").value;
-          const password = document.getElementById("password").value;
-          login(email, password);
-        });
-      </script>
-
       <button id="logoutBtn" class="btn-primary">Wyloguj</button>
-      <script>
-        const logoutBtn = document.getElementById("logoutBtn");
-        logoutBtn.addEventListener("click", () => {
-          localStorage.removeItem("jwt");
-          localStorage.removeItem("user");
-          window.location.href = "login.html";
-        });
-      </script>
     </section>
   </body>
 </html>

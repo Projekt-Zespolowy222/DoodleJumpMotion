@@ -340,9 +340,8 @@ services:
     networks:
       - doodle_net
     environment:
-      # передаём URL-ы сервисов внутрь контейнера
-      USER_SERVICE_URL: http://user-service:8080
-      SESSION_SERVICE_URL: http://session-service:8083
-      MATCHMAKER_SERVICE_URL: http://matchmaker:8084
-      GAME_DEV_URL: http://game-dev:8079 # для iframe
-      SESSION_SERVICE_WS_URL: ws://session-service:8083/ws
+      USER_SERVICE_URL: http://localhost:8085
+      SESSION_SERVICE_URL: http://localhost:8087
+      MATCHMAKER_SERVICE_URL: http://localhost:8088
+      GAME_DEV_URL: http://localhost:8079
+      SESSION_SERVICE_WS_URL: ws://localhost:8087/ws

@@ -26,7 +26,7 @@ func main() {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"http://127.0.0.1:5500", // frontend
-			"http://localhost:8079", // Expo Web
+			"http://localhost:3000", // Expo Web
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
