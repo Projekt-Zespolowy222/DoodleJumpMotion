@@ -203,30 +203,20 @@ func checkEndConditions(s *models.Session) (finished bool, winnerID *uint) {
     // 2. Умер Player1 → победа Player2 если 2x score
     // -------------------------------------------------
     if p1Dead && !p2Dead {
-        if s.Player2Score >= 2*s.Player1Score {
+        if s.Player2Score > 2 * s.Player1Score {
             return true, &s.Player2ID
         }
         return false, nil
     }
-
+    
     // -------------------------------------------------
     // 3. Умер Player2 → победа Player1 если 2x score
     // -------------------------------------------------
     if p2Dead && !p1Dead {
-        if s.Player1Score >= 2*s.Player2Score {
+        if s.Player1Score > 2 * s.Player2Score {
             return true, &s.Player1ID
         }
         return false, nil
-    }
-
-    // -------------------------------------------------
-    // 4. Никто не умер — победа по 2x счету
-    // -------------------------------------------------
-    if s.Player1Score >= 2*s.Player2Score {
-        return true, &s.Player1ID
-    }
-    if s.Player2Score >= 2*s.Player1Score {
-        return true, &s.Player2ID
     }
 
     return false, nil
@@ -240,6 +230,10 @@ func finalizeSession(
     matchCreator services.MatchCreator,
     userClient *clients.UserClient, // ← Добавили параметр
 ) {
+    if session.Status == "finished" {
+        fmt.Printf("[FINALIZE] Session %d already finished, skipping\n", session.ID)
+        return
+    }
     fmt.Printf("[FINALIZE] Finalizing session %d, winner %v\n", session.ID, winnerID)
 
     session.WinnerID = winnerID
