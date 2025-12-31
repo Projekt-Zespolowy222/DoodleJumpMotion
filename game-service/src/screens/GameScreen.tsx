@@ -476,7 +476,8 @@ export const GameScreen = ({ seed }: { seed: number }) => {
       if (velocityY.value > 0) {
         // Падаем вниз
         const doodleBottom = y.value + DOODLE_SIZE;
-        const doodleCenterX = x.value + DOODLE_SIZE / 2;
+        const doodleLeft = x.value;
+        const doodleRight = x.value + DOODLE_SIZE;
 
         let foundPlatform = false;
 
@@ -496,8 +497,7 @@ export const GameScreen = ({ seed }: { seed: number }) => {
 
           // Проверяем горизонтальное пересечение
           const isHorizontallyAligned =
-            doodleCenterX > platformLeft + 10 &&
-            doodleCenterX < platformRight - 10;
+            doodleRight > platformLeft && doodleLeft < platformRight;
 
           if (willIntersectVertically && isHorizontallyAligned) {
             // Приземляемся на платформу

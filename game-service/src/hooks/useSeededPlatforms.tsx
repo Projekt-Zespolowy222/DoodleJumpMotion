@@ -28,8 +28,8 @@ export function useSeededPlatforms(seed?: number | null) {
     /* остальные 19 – как раньше, через seeded/random */
     for (let i = 1; i < PLATFORM_COUNT; i++) {
       const platformX = rnd
-        ? rnd.range(20, width - PLATFORM_WIDTH - 40)
-        : Math.random() * (width - PLATFORM_WIDTH - 40) + 20;
+        ? rnd.range(20, width - PLATFORM_WIDTH - 10)
+        : Math.random() * (width - PLATFORM_WIDTH - 20) + 10;
 
       positions.push({ x: platformX, y: currentY });
 

@@ -228,7 +228,7 @@ func finalizeSession(
     hub *Hub, 
     sessionService *services.SessionService, 
     matchCreator services.MatchCreator,
-    userClient *clients.UserClient, // ← Добавили параметр
+    userClient *clients.UserClient,
 ) {
     if session.Status == "finished" {
         fmt.Printf("[FINALIZE] Session %d already finished, skipping\n", session.ID)
@@ -273,7 +273,7 @@ func finalizeSession(
             fmt.Printf("[FINALIZE] ✅ Winner cups updated successfully\n")
         }
 
-        if err := userClient.ChangeCups(loserID, -loserCups); err != nil {
+        if err := userClient.ChangeCups(loserID, loserCups); err != nil {
             fmt.Printf("[FINALIZE] ❌ Error updating loser cups: %v\n", err)
         } else {
             fmt.Printf("[FINALIZE] ✅ Loser cups updated successfully\n")

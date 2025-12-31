@@ -55,10 +55,10 @@ func СalculateCupDiff(winnerScore, loserScore int) (winnerCups int, loserCups i
 
     if ratio >= 2.0 {
         winnerCups = baseDiff + 10
-        loserCups = baseDiff + 10
+        loserCups = -(baseDiff + 10)
     } else {
         winnerCups = baseDiff + int(float64(baseDiff)*(ratio-1))
-        loserCups = baseDiff
+        loserCups = -baseDiff
     }
 
     return
