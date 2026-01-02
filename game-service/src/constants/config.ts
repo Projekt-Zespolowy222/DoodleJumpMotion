@@ -8,3 +8,4 @@ export const PLATFORM_HEIGHT = 20;
 export const MOVE_SPEED = 5;
 export const GRAVITY = 0.25; // Еще меньше гравитация для более плавных прыжков
 export const JUMP_HEIGHT = 14; // Увеличил высоту прыжка
+export const ARENAS = "";

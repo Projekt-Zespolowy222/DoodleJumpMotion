@@ -9,9 +9,10 @@
       const params = new URLSearchParams(location.search);
       const sessionId = params.get("sessionId");
       const seed = params.get("seed");
+      const arenaId = params.get("arenaId") || "default";
 
       // Формируем URL для iframe с параметрами
-      const iframeSrc = `http://localhost:8079/?seed=${seed}&sessionId=${sessionId}`;
+      const iframeSrc = `http://localhost:8079/?seed=${seed}&sessionId=${sessionId}&arenaId=${arenaId}`;
 
       // Когда DOM загрузится, установим src
       window.onload = () => {

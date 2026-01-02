@@ -81,6 +81,25 @@ async function connectToReadySession() {
   window.GAME_SEED = seed;
   console.log("[INIT] подключаемся к сессии", sessionId, "seed", seed);
 
+  const gameIframe = document.getElementById("gameIframe");
+
+  const sendInitData = () => {
+    gameIframe.contentWindow.postMessage(
+      {
+        type: "INIT_GAME", // Создадим специальный тип для инициализации
+        seed: seed,
+        userId: userId,
+      },
+      "*"
+    );
+  };
+
+  if (gameIframe.contentWindow) {
+    sendInitData();
+  } else {
+    gameIframe.onload = sendInitData;
+  }
+
   // 2. открываем WS
   await openWS(sessionId);
 

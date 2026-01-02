@@ -9,10 +9,8 @@ interface PlatformProps {
   height: number;
 }
 
-export const Platform: React.FC<PlatformProps> = ({ x, y, width, height }) => {
-  return (
-    <View style={[styles.platform, { left: x, bottom: y, width, height }]} />
-  );
+export const Platform: React.FC<PlatformProps> = ({ width, height }) => {
+  return <View style={[styles.platform, { width, height }]} />;
 };
 
 const styles = StyleSheet.create({

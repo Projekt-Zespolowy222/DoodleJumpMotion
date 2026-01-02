@@ -101,10 +101,13 @@
           clearInterval(pollInterval);
           document.getElementById("matchStatus").innerText =
             "Rywal znaleziony!";
-          document.getElementById("connectBtn").style.display = "inline-block";
+          const connBtn = document.getElementById("connectBtn");
+          connBtn.style.display = "inline-block";
           document.getElementById("findMatchBtn").style.display = "none";
-          document.getElementById("connectBtn").dataset.seed = st.seed;
-          document.getElementById("connectBtn").dataset.sid = st.session_id;
+
+          connBtn.dataset.seed = st.seed;
+          connBtn.dataset.sid = st.session_id;
+          connBtn.dataset.arena = st.arena_id || st.arena;
         }
       }, 1000);
     };
