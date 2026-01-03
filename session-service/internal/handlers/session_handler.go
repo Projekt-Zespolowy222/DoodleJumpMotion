@@ -24,10 +24,24 @@ type SessionHandler struct {
 	hub     *ws.Hub
 }
 
+
+func (h *SessionHandler) calculateArenaByCups(cups int) int {
+    if cups < 499 {return 1}
+    if cups < 999 {return 2}
+    if cups < 1499 {return 3}
+    if cups < 1999 {return 4}
+    if cups < 2499 {return 5}
+    if cups < 2999 {return 6}
+    if cups < 3499 {return 7}
+    if cups < 3999 {return 8}
+    if cups < 4499 {return 9} 
+    return 10
+}
+
 func NewSessionHandler() *SessionHandler {
 	repo := repositories.NewSessionRepository()
 	service := services.NewSessionService(repo)
-	 userClient := clients.NewUserClient()
+	userClient := clients.NewUserClient()
 	return &SessionHandler{service: service, userClient: userClient}
 }
 
@@ -73,7 +87,20 @@ func (h *SessionHandler) GetSession(c *gin.Context) {
         return
     }
 
-    c.JSON(http.StatusOK, session)
+    arenaID := 1
+    user, err := h.userClient.GetUser(session.Player1ID)
+    if err == nil {
+        arenaID = h.calculateArenaByCups(user.CupCount)
+    }
+
+    resp := dto.SessionResponse{
+        ID:      session.ID,
+        Seed:    session.Seed,
+        ArenaID: strconv.Itoa(arenaID),
+        Status:  session.Status,
+    }
+
+    c.JSON(http.StatusOK, resp)
 }
 
 func (h *SessionHandler) JoinSession(c *gin.Context) {

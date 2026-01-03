@@ -76,9 +76,12 @@ async function connectToReadySession() {
     headers: { Authorization: `Bearer ${getJwt()}` },
   });
   if (!res.ok) throw new Error(await res.text());
-  const { Seed: seed } = await res.json();
+  const data = await res.json();
+  const seed = data.seed;
+  const arenaId = data.arena_id;
 
   window.GAME_SEED = seed;
+  window.ARENA_ID = arenaId;
   console.log("[INIT] подключаемся к сессии", sessionId, "seed", seed);
 
   const gameIframe = document.getElementById("gameIframe");

@@ -110,67 +110,73 @@ func WSHandler(hub *Hub, sessionService *services.SessionService, matchCreator s
 
         switch payload["type"] {
         case "score":
-			currentSession, err := sessionService.GetSession(session.ID)
-			if err == nil {
-				session = currentSession
-			}
-            fmt.Printf("[WS] Handling type='score' from user %d\n", userID)
             score := int(payload["value"].(float64))
-            if userID == session.Player1ID {
-                session.Player1Score = score
+            // 1. Получаем СВЕЖИЕ данные из БД перед обновлением
+            currentSession, err := sessionService.GetSession(sessionID)
+            if err != nil {
+                fmt.Printf("[WS] Error getting session: %v\n", err)
+                continue
+            }
+
+            if userID == currentSession.Player1ID {
+                currentSession.Player1Score = score
             } else {
-                session.Player2Score = score
+                currentSession.Player2Score = score
             }
-            sessionService.UpdateSession(session)
+
+            // 2. Сохраняем
+            sessionService.UpdateSession(currentSession)
+
+            // 3. Рассылаем оппоненту
             scoreMsg := fmt.Sprintf(`{"type":"opponent_score","value":{"user_id":%d,"score":%d}}`, userID, score)
-            hub.Broadcast(session.ID, scoreMsg)
+            hub.Broadcast(sessionID, scoreMsg)
 
-            finished, winnerID := checkEndConditions(session)
+            // 4. Проверяем конец игры на СВЕЖИХ данных
+            finished, winnerID := checkEndConditions(currentSession)
             if finished {
-                finalizeSession(session, winnerID, hub, sessionService, matchCreator, userClient)
+                finalizeSession(currentSession, winnerID, hub, sessionService, matchCreator, userClient)
             }
-
-        case "join":
-			currentSession, err := sessionService.GetSession(session.ID)
-			if err == nil {
-				session = currentSession
-			}
-            fmt.Printf("[WS] Handling type='join' from user %d\n", userID)
-            now := time.Now()
-            if userID == session.Player1ID && session.Player1JoinedAt == nil {
-                session.Player1JoinedAt = &now
-            }
-            if userID == session.Player2ID && session.Player2JoinedAt == nil {
-                session.Player2JoinedAt = &now
-            }
-            if session.Player1JoinedAt != nil && session.Player2JoinedAt != nil {
-                session.Status = "active"
-                session.StartedAt = &now
-            }
-            sessionService.UpdateSession(session)
-            hub.Broadcast(session.ID, `{"type":"player_joined","user_id":`+strconv.Itoa(int(userID))+`}`)
-
         case "player_death":
-			currentSession, err := sessionService.GetSession(session.ID)
-			if err == nil {
-				session = currentSession
-			}
-			fmt.Printf("[WS] Handling type='player_death' from user %d\n", userID)
-			if userID == session.Player1ID {
-				session.Player1Death = "dead"
-				fmt.Printf("[WS] Set Player1Death = 'dead'\n")
-			} else {
-				session.Player2Death = "dead"
-				fmt.Printf("[WS] Set Player2Death = 'dead'\n")
-			}
-			sessionService.UpdateSession(session)
-			deathMsg := fmt.Sprintf(`{"type":"opponent_death","value":%d}`, userID)
-			hub.Broadcast(session.ID, deathMsg)
+            currentSession, err := sessionService.GetSession(sessionID)
+            if err != nil { continue }
 
-			finished, winnerID := checkEndConditions(session)
-			if finished {
-				finalizeSession(session, winnerID, hub, sessionService, matchCreator, userClient)
-			}
+            if userID == currentSession.Player1ID {
+                currentSession.Player1Death = "dead"
+            } else {
+                currentSession.Player2Death = "dead"
+            }
+            sessionService.UpdateSession(currentSession)
+            
+            hub.Broadcast(sessionID, fmt.Sprintf(`{"type":"opponent_death","value":%d}`, userID))
+
+            finished, winnerID := checkEndConditions(currentSession)
+            if finished {
+                finalizeSession(currentSession, winnerID, hub, sessionService, matchCreator, userClient)
+            }
+        case "join":
+            currentSession, err := sessionService.GetSession(sessionID)
+            if err != nil { continue }
+            
+            now := time.Now()
+            updated := false
+            if userID == currentSession.Player1ID && currentSession.Player1JoinedAt == nil {
+                currentSession.Player1JoinedAt = &now
+                updated = true
+            } else if userID == currentSession.Player2ID && currentSession.Player2JoinedAt == nil {
+                currentSession.Player2JoinedAt = &now
+                updated = true
+            }
+
+            if currentSession.Player1JoinedAt != nil && currentSession.Player2JoinedAt != nil && currentSession.Status == "waiting" {
+                currentSession.Status = "active"
+                currentSession.StartedAt = &now
+                updated = true
+            }
+
+            if updated {
+                sessionService.UpdateSession(currentSession)
+            }
+            hub.Broadcast(sessionID, fmt.Sprintf(`{"type":"player_joined","user_id":%d}`, userID))
         }
     }
 }()

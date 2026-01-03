@@ -17,3 +17,10 @@ type FinishSessionDTO struct {
 type LeaveSessionDTO struct {
 	PlayerID uint `json:"player_id" binding:"required"`
 }
+
+type SessionResponse struct {
+	ID      uint   `json:"id"`
+	Seed    uint32 `json:"seed"`
+	ArenaID string `json:"arena_id"`
+	Status  string `json:"status"`
+}

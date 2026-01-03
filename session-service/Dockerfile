@@ -5,10 +5,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o leaderboard-service cmd/api/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o sessions-service cmd/api/main.go
 
 FROM alpine:latest
 WORKDIR /root/
-COPY --from=builder /app/leaderboard-service .
+COPY --from=builder /app/sessions-service .
 EXPOSE 8080
-CMD ["./leaderboard-service"]
+CMD ["./sessions-service"]

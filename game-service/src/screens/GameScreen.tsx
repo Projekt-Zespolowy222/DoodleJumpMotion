@@ -30,7 +30,6 @@ import { publishDeath, publishScore } from "../contexts/SeedModule";
 import { usePoseLandmarker } from "../hooks/usePoseLandmarker";
 import { useSeededPlatforms } from "../hooks/useSeededPlatforms";
 import { SeededRandom } from "../utils/SeededRandom";
-import { clearInterval } from "timers";
 
 interface PlatformType {
   x: SharedValue<number>;
@@ -68,6 +67,7 @@ export const GameScreen = ({
 }) => {
   // 1. Подготовка данных и юзера
   const { platformsData, isReady, userId } = useInitializeGame(seed, arenaId);
+  console.log("DEBUG: platformsData is:", platformsData);
 
   // 2. Рефы для игровых состояний (не вызывают ререндер)
   const moveDirection = useRef<"left" | "right" | null>(null);
@@ -308,7 +308,12 @@ const useManagePlatforms = (platformsData: { x: number; y: number }[]) => {
   }, []);
 
   useEffect(() => {
-    if (platformsData.length > 0 && platforms.length === platformsData.length) {
+    if (
+      platformsData &&
+      platformsData.length > 0 &&
+      platforms &&
+      platforms.length === platformsData.length
+    ) {
       platformsData.forEach((data, index) => {
         platforms[index].x.value = data.x;
         platforms[index].y.value = data.y;

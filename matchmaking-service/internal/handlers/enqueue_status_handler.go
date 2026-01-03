@@ -29,6 +29,7 @@ func (h *StatusHandler) Handle(c *gin.Context) {
 			"status":     "found",
 			"session_id": item.SessionID,
 			"seed":       item.Seed,
+			"arena_id":   item.Arena,
 		})
 		return
 	}

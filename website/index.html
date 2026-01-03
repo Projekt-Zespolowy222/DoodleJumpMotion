@@ -116,7 +116,8 @@
     document.getElementById("connectBtn").onclick = function () {
       const seed = this.dataset.seed;
       const sid = this.dataset.sid;
-      location.href = `game.html?seed=${seed}&sessionId=${sid}`;
+      const arena = this.dataset.arena;
+      location.href = `game.html?seed=${seed}&sessionId=${sid}&arena_id=${arena}`;
     };
   </script>
 </html>
