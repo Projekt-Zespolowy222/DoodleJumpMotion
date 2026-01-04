@@ -20,6 +20,7 @@ export function usePoseLandmarker(
   const lastTorsoY = useRef<number>(0);
   const jumpThreshold = 0.05;
   const stableThreshold = 0.02;
+  const lastDetectionTimeRef = useRef<number>(0);
 
   const startDetection = () => {
     console.log("Starting pose detection");
@@ -46,13 +47,14 @@ export function usePoseLandmarker(
           baseOptions: {
             modelAssetPath:
               "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+            delegate: "GPU",
           },
           runningMode: "VIDEO",
         });
 
         setPoseLandmarker(landmarker);
       } catch (err) {
-        console.error("Ошибка инициализации PoseLandmarker:", err);
+        console.error("initialization error PoseLandmarker:", err);
       }
     }
 
@@ -68,47 +70,60 @@ export function usePoseLandmarker(
     const video = videoRef.current;
     let animationFrameId: number;
 
-    let lastDetectionTime = 0;
-    const DETECTION_INTERVAL = 100;
+    const DETECTION_INTERVAL = 50;
+
+    const processPoseResults = (landmarks: NormalizedLandmark[]) => {
+      const leftShoulder = landmarks[11];
+      const rightShoulder = landmarks[12];
+
+      if (leftShoulder && rightShoulder && setTorsoCoords) {
+        const torsoX = (leftShoulder.x + rightShoulder.x) / 2;
+        const torsoY = (leftShoulder.y + rightShoulder.y) / 2;
+
+        setTorsoCoords({ x: torsoX, y: torsoY });
+
+        if (lastTorsoY.current > 0) {
+          const deltaY = lastTorsoY.current - torsoY;
+
+          // Логика прыжка
+          if (deltaY > jumpThreshold && setIsJumping) {
+            setIsJumping(true);
+          } else if (Math.abs(deltaY) < stableThreshold && setIsJumping) {
+            setIsJumping(false);
+          }
+        }
+        lastTorsoY.current = torsoY;
+      }
+    };
 
     const detectPose = async () => {
-      const now = Date.now();
-      if (now - lastDetectionTime < DETECTION_INTERVAL) {
+      if (!isActive || !poseLandmarker) return;
+
+      const now = performance.now();
+
+      // 1. Пропускаем кадр, если прошло слишком мало времени
+      if (now - lastDetectionTimeRef.current < DETECTION_INTERVAL) {
         animationFrameId = requestAnimationFrame(detectPose);
         return;
       }
 
-      lastDetectionTime = now;
-      try {
-        const results: PoseLandmarkerResult = poseLandmarker.detectForVideo(
-          video,
-          performance.now()
-        );
+      // 2. Проверка готовности видео
+      const video = videoRef.current;
+      if (video && video.readyState >= 2 && video.videoWidth > 0) {
+        try {
+          lastDetectionTimeRef.current = now;
 
-        if (results.landmarks?.[0] && setTorsoCoords) {
-          const landmarks: NormalizedLandmark[] = results.landmarks[0];
-          const leftShoulder = landmarks[11];
-          const rightShoulder = landmarks[12];
+          const results = poseLandmarker.detectForVideo(video, now);
 
-          if (leftShoulder && rightShoulder) {
-            const torsoX = (leftShoulder.x + rightShoulder.x) / 2;
-            const torsoY = (leftShoulder.y + rightShoulder.y) / 2;
-
-            setTorsoCoords({ x: torsoX, y: torsoY });
-
-            if (lastTorsoY.current > 0) {
-              const deltaY = lastTorsoY.current - torsoY;
-              if (deltaY > jumpThreshold && setIsJumping) {
-                setIsJumping(true);
-              } else if (Math.abs(deltaY) < stableThreshold && setIsJumping) {
-                setIsJumping(false);
-              }
-            }
-            lastTorsoY.current = torsoY;
+          if (results.landmarks?.[0]) {
+            processPoseResults(results.landmarks[0]);
+          }
+        } catch (err) {
+          const error = err as Error;
+          if (!error.message?.includes("ROI")) {
+            console.error("Pose Error:", error);
           }
         }
-      } catch (err) {
-        console.error("Ошибка детекции позы:", err);
       }
 
       animationFrameId = requestAnimationFrame(detectPose);

@@ -6,7 +6,16 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Alert, Platform, StyleSheet, Text, View } from "react-native";
+
+import {
+  Alert,
+  ImageBackground,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+  Image,
+} from "react-native";
 import Animated, {
   SharedValue,
   useAnimatedStyle,
@@ -30,6 +39,7 @@ import { publishDeath, publishScore } from "../contexts/SeedModule";
 import { usePoseLandmarker } from "../hooks/usePoseLandmarker";
 import { useSeededPlatforms } from "../hooks/useSeededPlatforms";
 import { SeededRandom } from "../utils/SeededRandom";
+import { arenaAssets } from "../constants/arenaAssets";
 
 interface PlatformType {
   x: SharedValue<number>;
@@ -45,7 +55,79 @@ interface ArenaConfig {
   doodleSize: number;
 }
 
-const arenaConfig = {
+const arenaConfig1 = {
+  gravity: 0.8,
+  jumpHeight: 15,
+  moveSpeed: 8,
+  platformWidth: 60,
+  platformHeight: 20,
+  doodleSize: 40,
+};
+const arenaConfig2 = {
+  gravity: 0.8,
+  jumpHeight: 15,
+  moveSpeed: 8,
+  platformWidth: 60,
+  platformHeight: 20,
+  doodleSize: 40,
+};
+const arenaConfig3 = {
+  gravity: 0.8,
+  jumpHeight: 15,
+  moveSpeed: 8,
+  platformWidth: 60,
+  platformHeight: 20,
+  doodleSize: 40,
+};
+const arenaConfig4 = {
+  gravity: 0.8,
+  jumpHeight: 15,
+  moveSpeed: 8,
+  platformWidth: 60,
+  platformHeight: 20,
+  doodleSize: 40,
+};
+const arenaConfig5 = {
+  gravity: 0.8,
+  jumpHeight: 15,
+  moveSpeed: 8,
+  platformWidth: 60,
+  platformHeight: 20,
+  doodleSize: 40,
+};
+const arenaConfig6 = {
+  gravity: 0.8,
+  jumpHeight: 15,
+  moveSpeed: 8,
+  platformWidth: 60,
+  platformHeight: 20,
+  doodleSize: 40,
+};
+const arenaConfig7 = {
+  gravity: 0.8,
+  jumpHeight: 15,
+  moveSpeed: 8,
+  platformWidth: 60,
+  platformHeight: 20,
+  doodleSize: 40,
+};
+const arenaConfig8 = {
+  gravity: 0.8,
+  jumpHeight: 15,
+  moveSpeed: 8,
+  platformWidth: 60,
+  platformHeight: 20,
+  doodleSize: 40,
+};
+const arenaConfig9 = {
+  gravity: 0.8,
+  jumpHeight: 15,
+  moveSpeed: 8,
+  platformWidth: 60,
+  platformHeight: 20,
+  doodleSize: 40,
+};
+const arenaConfig10 = {
   gravity: 0.8,
   jumpHeight: 15,
   moveSpeed: 8,
@@ -65,6 +147,22 @@ export const GameScreen = ({
   seed: number;
   arenaId: string;
 }) => {
+  const arenaConfigs = [
+    arenaConfig1,
+    arenaConfig2,
+    arenaConfig3,
+    arenaConfig4,
+    arenaConfig5,
+    arenaConfig6,
+    arenaConfig7,
+    arenaConfig8,
+    arenaConfig9,
+    arenaConfig10,
+  ];
+
+  const assets = arenaAssets[arenaId] ?? arenaAssets["1"];
+
+  const arenaConfig = arenaConfigs[parseInt(arenaId, 10) - 1] ?? arenaConfig1;
   // 1. Подготовка данных и юзера
   const { platformsData, isReady, userId } = useInitializeGame(seed, arenaId);
   console.log("DEBUG: platformsData is:", platformsData);
@@ -98,7 +196,7 @@ export const GameScreen = ({
 
   // 5. Инициализация Shared Values
   const cameraOffset = useSharedValue(0);
-  const { platforms } = useManagePlatforms(platformsData);
+  const { platforms } = useManagePlatforms(platformsData, seed);
   const { x, y, velocityY } = useManageCharacter(platformsData, seed);
 
   // 6. Запуск "Двигателей" (Хуки логики)
@@ -151,6 +249,45 @@ export const GameScreen = ({
     }
   }, [score]);
 
+  // 7.5 Запуск камеры и детекции
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+
+    async function enableCam() {
+      if (isReady && videoRef.current) {
+        try {
+          console.log("DEBUG: Requesting camera access...");
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 160 },
+              height: { ideal: 120 },
+              frameRate: { ideal: 10 },
+            },
+          });
+          videoRef.current.srcObject = stream;
+
+          // Ждем, пока видео реально начнет играть
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play();
+            console.log("DEBUG: Video playing, starting detection");
+            startDetection();
+          };
+        } catch (err) {
+          console.error("Camera access denied", err);
+        }
+      }
+    }
+
+    enableCam();
+
+    return () => {
+      stopDetection();
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [isReady]);
+
   // 8. Стили анимации
   const doodleStyle = useAnimatedStyle(() => ({
     transform: [
@@ -163,20 +300,20 @@ export const GameScreen = ({
 
   return (
     <View style={styles.container}>
-      {Platform.OS === "web" && (
-        <video
-          ref={videoRef}
-          style={styles.hiddenCamera}
-          autoPlay
-          playsInline
-          muted
-        />
-      )}
+      {/* Добавляем фон арены */}
+      <ImageBackground
+        source={assets.background}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+      />
+
+      {/* ... видео ... */}
 
       <Score y={score} />
 
       <Animated.View style={[styles.doodleContainer, doodleStyle]}>
-        <Doodle size={arenaConfig.doodleSize} />
+        {/* Передаем текстуру в Doodle */}
+        <Doodle size={arenaConfig.doodleSize} texture={assets.doodle} />
       </Animated.View>
 
       {platforms.map((p, i) => (
@@ -185,6 +322,7 @@ export const GameScreen = ({
           platform={p}
           offset={cameraOffset}
           config={arenaConfig}
+          texture={assets.platform} // Передаем текстуру платформы
         />
       ))}
     </View>
@@ -192,7 +330,7 @@ export const GameScreen = ({
 };
 
 // Вспомогательный компонент для отрисовки платформы (чтобы не плодить хуки в цикле)
-const PlatformRenderer = ({ platform, offset, config }: any) => {
+const PlatformRenderer = ({ platform, offset, config, texture }: any) => {
   const style = useAnimatedStyle(() => ({
     transform: [
       { translateX: platform.x.value },
@@ -201,11 +339,13 @@ const PlatformRenderer = ({ platform, offset, config }: any) => {
   }));
   return (
     <Animated.View style={[{ position: "absolute" }, style]}>
-      <PlatformComponent
-        width={config.platformWidth}
-        height={config.platformHeight}
-        x={0}
-        y={0}
+      <Image
+        source={texture}
+        style={{
+          width: config.platformWidth,
+          height: config.platformHeight,
+        }}
+        resizeMode="stretch"
       />
     </Animated.View>
   );
@@ -241,16 +381,17 @@ const styles = StyleSheet.create({
   },
   hiddenCamera: {
     position: "absolute",
-    top: -1000,
-    left: -1000,
-    width: 1,
-    height: 1,
-    opacity: 0,
+    bottom: 10, // перенеси вниз
+    right: 10, // в угол
+    width: 160, // дай реальный размер для просчета
+    height: 120,
+    opacity: 0.01, // почти невидимая, но "отрисовываемая"
+    zIndex: -1,
   },
   doodleContainer: {
     position: "absolute",
-    width: arenaConfig.doodleSize,
-    height: arenaConfig.doodleSize,
+    width: 40,
+    height: 40,
   },
 });
 
@@ -299,28 +440,78 @@ const useInitializeGame = (seed: number, arenaId: string) => {
   return { platformsData, isReady: platformsData.length > 0, userId };
 };
 
-const useManagePlatforms = (platformsData: { x: number; y: number }[]) => {
-  const platforms = useMemo(() => {
-    return platformsData.map((data) => ({
-      x: useSharedValue(data.x),
-      y: useSharedValue(data.y),
-    }));
-  }, []);
+export const useManagePlatforms = (
+  platformsData: { x: number; y: number }[] | undefined,
+  seed: number
+) => {
+  // 1. Создаем фиксированный массив SharedValues.
+  // Это ЕДИНСТВЕННЫЙ безопасный способ инициализировать массив хуков.
+  // Мы создаем их один раз, и они не меняются между рендерами.
+  const p0 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p1 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p2 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p3 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p4 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p5 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p6 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p7 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p8 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p9 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p10 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p11 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p12 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p13 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p14 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p15 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p16 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p17 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p18 = { x: useSharedValue(0), y: useSharedValue(0) };
+  const p19 = { x: useSharedValue(0), y: useSharedValue(0) };
 
+  // Группируем их в массив через useMemo, чтобы ссылка на сам массив была стабильной
+  const platforms = useMemo(
+    () => [
+      p0,
+      p1,
+      p2,
+      p3,
+      p4,
+      p5,
+      p6,
+      p7,
+      p8,
+      p9,
+      p10,
+      p11,
+      p12,
+      p13,
+      p14,
+      p15,
+      p16,
+      p17,
+      p18,
+      p19,
+    ],
+    []
+  );
+
+  // 2. Инициализация данными с сервера
   useEffect(() => {
-    if (
-      platformsData &&
-      platformsData.length > 0 &&
-      platforms &&
-      platforms.length === platformsData.length
-    ) {
+    if (platformsData && platformsData.length > 0) {
+      // Заполняем столько платформ, сколько пришло (но не больше 20)
       platformsData.forEach((data, index) => {
-        platforms[index].x.value = data.x;
-        platforms[index].y.value = data.y;
+        if (platforms[index]) {
+          platforms[index].x.value = data.x;
+          platforms[index].y.value = data.y;
+        }
       });
+      console.log(
+        `[GAME] Initialized ${platformsData.length} platforms with seed: ${seed}`
+      );
     }
-  }, [platformsData, platforms]);
+  }, [platformsData]);
 
+  // 3. Возвращаем массив для рендеринга и функцию для бесконечной логики
   return { platforms };
 };
 
