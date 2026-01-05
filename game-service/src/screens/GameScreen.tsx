@@ -57,10 +57,10 @@ interface ArenaConfig {
 
 const arenaConfig1 = {
   gravity: 0.8,
-  jumpHeight: 15,
-  moveSpeed: 8,
-  platformWidth: 60,
-  platformHeight: 20,
+  jumpHeight: 35,
+  moveSpeed: 6,
+  platformWidth: 160,
+  platformHeight: 32,
   doodleSize: 40,
 };
 const arenaConfig2 = {
@@ -214,6 +214,8 @@ export const GameScreen = ({
     );
   };
 
+  const moveSpeed = useRef(arenaConfig.moveSpeed);
+
   // Основной физический движок
   useManagePhysics(
     x,
@@ -230,18 +232,31 @@ export const GameScreen = ({
     userId,
     score,
     setScore,
-    createNewPlatform
+    createNewPlatform,
+    moveSpeed
   );
 
   // 7. Обработка направления движения из координат камеры
   useEffect(() => {
     if (torsoCoords.x === 0) return;
     const centerX = 0.5;
-    const deadZone = 0.15;
-    if (torsoCoords.x < centerX - deadZone) moveDirection.current = "right";
-    else if (torsoCoords.x > centerX + deadZone) moveDirection.current = "left";
-    else moveDirection.current = null;
-  }, [torsoCoords.x]);
+    const deadZone = 0.05;
+    const leanFactor = 0.5;
+
+    if (torsoCoords.x < centerX - deadZone) {
+      moveDirection.current = "right";
+      const leanAmount = (centerX - torsoCoords.x) / centerX;
+      // ИСПОЛЬЗУЕМ arenaConfig и записываем в реф .current
+      moveSpeed.current = arenaConfig.moveSpeed * leanAmount * leanFactor;
+    } else if (torsoCoords.x > centerX + deadZone) {
+      moveDirection.current = "left";
+      const leanAmount = (torsoCoords.x - centerX) / centerX;
+      moveSpeed.current = arenaConfig.moveSpeed * leanAmount * leanFactor;
+    } else {
+      moveDirection.current = null;
+      moveSpeed.current = arenaConfig.moveSpeed; // Сброс на стандартную
+    }
+  }, [torsoCoords.x, arenaConfig]);
 
   useEffect(() => {
     if (score > 0) {
@@ -307,7 +322,18 @@ export const GameScreen = ({
         resizeMode="cover"
       />
 
-      {/* ... видео ... */}
+      {/* Скрытое видео для работы MediaPipe */}
+      <video
+        ref={videoRef}
+        style={{
+          position: "absolute",
+          width: 1, // Минимальный размер, чтобы не мешать
+          height: 1,
+          opacity: 0, // Полностью прозрачное
+        }}
+        playsInline
+        muted
+      />
 
       <Score y={score} />
 
@@ -549,7 +575,8 @@ const useManagePhysics = (
   userId: number,
   score: number,
   setScore: (s: number) => void,
-  createNewPlatform: (p: PlatformType) => void
+  createNewPlatform: (p: PlatformType) => void,
+  moveSpeed: any
 ) => {
   useEffect(() => {
     const interval = setInterval(() => {
@@ -560,17 +587,27 @@ const useManagePhysics = (
 
       // 1. Движение по горизонтали (X)
       if (moveDirection.current === "left") {
-        x.value = Math.max(0, x.value - config.moveSpeed);
+        x.value = Math.max(0, x.value - moveSpeed.current);
       } else if (moveDirection.current === "right") {
         x.value = Math.min(
           width - config.doodleSize,
-          x.value + config.moveSpeed
+          x.value + moveSpeed.current
         );
       }
 
       // 2. Физика падения (Y)
       velocityY.value += config.gravity;
       y.value += velocityY.value;
+
+      // Добавляем движение в бок при прыжке
+      if (velocityY.value < 0) {
+        // Если персонаж прыгает вверх
+        if (moveDirection.current === "left") {
+          x.value -= moveSpeed.current * 0.5; // Двигаем влево с уменьшенной скоростью
+        } else if (moveDirection.current === "right") {
+          x.value += moveSpeed.current * 0.5; // Двигаем вправо с уменьшенной скоростью
+        }
+      }
 
       // 3. Логика камеры (скролл вверх)
       const SCROLL_THRESHOLD = height * 0.5;
