@@ -56,9 +56,9 @@ interface ArenaConfig {
 }
 
 const arenaConfig1 = {
-  gravity: 0.8,
+  gravity: 0.5,
   jumpHeight: 20,
-  moveSpeed: 6,
+  moveSpeed: 15,
   platformWidth: 160,
   platformHeight: 32,
   doodleSize: 40,
@@ -209,7 +209,9 @@ export const GameScreen = ({
   // Функция для создания новых платформ при бесконечном цикле
   const createNewPlatform = (platform: PlatformType) => {
     const highestY = Math.min(...platforms.map((p) => p.y.value));
-    platform.y.value = highestY - rndRef.current.range(60, 100);
+    const safeJumpDistance = arenaConfig.jumpHeight * 4;
+    const gap = rndRef.current.range(50, Math.max(60, safeJumpDistance));
+    platform.y.value = highestY - gap;
     platform.x.value = rndRef.current.range(
       30,
       width - arenaConfig.platformWidth - 30
@@ -377,7 +379,17 @@ export const GameScreen = ({
 };
 
 // Вспомогательный компонент для отрисовки платформы (чтобы не плодить хуки в цикле)
-const PlatformRenderer = ({ platform, offset, config, texture }: any) => {
+const PlatformRenderer = ({
+  platform,
+  offset,
+  config,
+  texture,
+}: {
+  platform: PlatformType;
+  offset: SharedValue<number>;
+  config: ArenaConfig;
+  texture: any;
+}) => {
   const style = useAnimatedStyle(() => ({
     transform: [
       { translateX: platform.x.value },
@@ -585,14 +597,12 @@ const useManagePhysics = (
   velocityY: SharedValue<number>,
   platforms: PlatformType[],
   cameraOffset: SharedValue<number>,
-  // Рефы из GameScreen
   moveDirection: React.RefObject<"left" | "right" | null>,
   isOnPlatform: React.RefObject<boolean>,
   lastPlatformHit: React.RefObject<number | null>,
   started: React.RefObject<boolean>,
   gameOver: React.RefObject<boolean>,
-  // Настройки и колбэки
-  config: any, // Сюда передадим arenaConfig
+  config: any,
   userId: number,
   score: number,
   setScore: (s: number) => void,
@@ -606,7 +616,22 @@ const useManagePhysics = (
         return;
       }
 
-      // 1. Движение по горизонтали (X)
+      // 1. Плавная камера (делаем в самом начале кадра)
+      const TARGET_SCREEN_Y = height * 0.75; // нижняя четверть экрана
+      const CAMERA_SMOOTHING = 0.12;
+
+      if (y.value < TARGET_SCREEN_Y) {
+        const diff = TARGET_SCREEN_Y - y.value;
+        const step = diff * CAMERA_SMOOTHING;
+
+        cameraOffset.value += step;
+        y.value += step; // важно: двигаем игрока вместе с миром
+
+        const newScore = Math.floor(cameraOffset.value / 10);
+        if (newScore > score) setScore(newScore);
+      }
+
+      // 2. Горизонтальное движение
       if (moveDirection.current === "left") {
         x.value = Math.max(0, x.value - moveSpeed.current);
       } else if (moveDirection.current === "right") {
@@ -616,73 +641,60 @@ const useManagePhysics = (
         );
       }
 
-      // 2. Физика падения (Y)
-      velocityY.value += config.gravity;
-      y.value += velocityY.value;
+      // 3. Физика падения
+      const nextVelocityY = velocityY.value + config.gravity;
+      const nextY = y.value + nextVelocityY;
 
-      // Добавляем движение в бок при прыжке
-      if (velocityY.value < 0) {
-        // Если персонаж прыгает вверх
-        if (moveDirection.current === "left") {
-          x.value -= moveSpeed.current * 0.5; // Двигаем влево с уменьшенной скоростью
-        } else if (moveDirection.current === "right") {
-          x.value += moveSpeed.current * 0.5; // Двигаем вправо с уменьшенной скоростью
-        }
-      }
+      // 4. Проверка столкновения
+      let foundCollision = false;
 
-      // 3. Логика камеры (скролл вверх)
-      const SCROLL_THRESHOLD = height * 0.5;
-      if (y.value < SCROLL_THRESHOLD) {
-        const diff = SCROLL_THRESHOLD - y.value;
-        cameraOffset.value += diff; // Сдвигаем камеру
-        y.value = SCROLL_THRESHOLD; // Удерживаем персонажа в центре
-
-        // Начисляем очки за подъем
-        const newScore = Math.floor(cameraOffset.value / 10);
-        if (newScore > score) setScore(newScore);
-      }
-
-      // 4. Проверка приземления (только когда падаем вниз)
-      if (velocityY.value > 0) {
-        const doodleBottom = y.value + config.doodleSize;
+      // Проверяем столкновение только при движении вниз
+      if (nextVelocityY > 0) {
+        const doodleBottomCurrent = y.value + config.doodleSize;
+        const doodleBottomNext = nextY + config.doodleSize;
         const doodleLeft = x.value;
         const doodleRight = x.value + config.doodleSize;
 
-        let found = false;
         platforms.forEach((p, index) => {
-          if (found) return;
+          if (foundCollision) return;
 
-          const pTop = p.y.value + cameraOffset.value; // Реальное Y на экране
+          // ВАЖНО: используем актуальный cameraOffset.value
+          const pTop = p.y.value + cameraOffset.value;
           const pLeft = p.x.value;
+          const pRight = pLeft + config.platformWidth;
 
-          // Проверка коллизии
-          if (
-            doodleBottom >= pTop &&
-            doodleBottom <= pTop + config.platformHeight + velocityY.value &&
-            doodleRight > pLeft &&
-            doodleLeft < pLeft + config.platformWidth
-          ) {
-            // Приземление
+          const wasAbove = doodleBottomCurrent <= pTop + 2; // Увеличили допуск до 2px
+          const willBeBelow = doodleBottomNext >= pTop;
+          const isWithinHorizontal =
+            doodleRight > pLeft + 5 && doodleLeft < pRight - 5;
+
+          if (wasAbove && willBeBelow && isWithinHorizontal) {
             y.value = pTop - config.doodleSize;
             velocityY.value = 0;
             (isOnPlatform as any).current = true;
             (lastPlatformHit as any).current = index;
-            found = true;
+            foundCollision = true;
           }
         });
-        if (!found) (isOnPlatform as any).current = false;
       }
 
-      // 5. Переиспользование платформ (Infinite loop)
+      // 5. Обновление позиции, если не упали на платформу
+      if (!foundCollision) {
+        y.value = nextY;
+        velocityY.value = nextVelocityY;
+        (isOnPlatform as any).current = false;
+      }
+
+      // 6. Цикл платформ
       platforms.forEach((p) => {
-        // Если платформа ушла за нижний край экрана
         if (p.y.value + cameraOffset.value > height + 100) {
           createNewPlatform(p);
         }
       });
 
-      // 6. Проверка смерти (упал ниже экрана)
-      if (y.value > height + config.doodleSize) {
+      // 7. Смерть
+      if (y.value > height + 100) {
+        // Даем чуть больше места внизу
         (gameOver as any).current = true;
         publishDeath(userId);
         Alert.alert("Game Over", `Score: ${score}`);
