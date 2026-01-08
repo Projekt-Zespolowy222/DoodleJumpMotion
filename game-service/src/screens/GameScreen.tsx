@@ -57,7 +57,7 @@ interface ArenaConfig {
 
 const arenaConfig1 = {
   gravity: 0.8,
-  jumpHeight: 35,
+  jumpHeight: 20,
   moveSpeed: 6,
   platformWidth: 160,
   platformHeight: 32,
@@ -160,6 +160,8 @@ export const GameScreen = ({
     arenaConfig10,
   ];
 
+  const [isCameraActive, setIsCameraActive] = useState(true);
+
   const assets = arenaAssets[arenaId] ?? arenaAssets["1"];
 
   const arenaConfig = arenaConfigs[parseInt(arenaId, 10) - 1] ?? arenaConfig1;
@@ -236,6 +238,19 @@ export const GameScreen = ({
     moveSpeed
   );
 
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Проверяем нажатие клавиши C (английская или русская раскладка)
+      if (event.key.toLowerCase() === "c" || event.key.toLowerCase() === "с") {
+        setIsCameraActive((prev) => !prev);
+        console.log("DEBUG: Camera toggled:", !isCameraActive);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [isCameraActive]);
+
   // 7. Обработка направления движения из координат камеры
   useEffect(() => {
     if (torsoCoords.x === 0) return;
@@ -268,8 +283,9 @@ export const GameScreen = ({
   useEffect(() => {
     let stream: MediaStream | null = null;
 
-    async function enableCam() {
-      if (isReady && videoRef.current) {
+    async function toggleCam() {
+      // Если камера активна и всё готово
+      if (isCameraActive && isReady && videoRef.current) {
         try {
           console.log("DEBUG: Requesting camera access...");
           stream = await navigator.mediaDevices.getUserMedia({
@@ -280,28 +296,33 @@ export const GameScreen = ({
             },
           });
           videoRef.current.srcObject = stream;
-
-          // Ждем, пока видео реально начнет играть
           videoRef.current.onloadedmetadata = () => {
             videoRef.current?.play();
-            console.log("DEBUG: Video playing, starting detection");
             startDetection();
           };
         } catch (err) {
           console.error("Camera access denied", err);
         }
+      } else {
+        // Если камеру выключили
+        stopDetection();
+        if (videoRef.current && videoRef.current.srcObject) {
+          const currentStream = videoRef.current.srcObject as MediaStream;
+          currentStream.getTracks().forEach((track) => track.stop());
+          videoRef.current.srcObject = null;
+        }
+        // Сбрасываем координаты, чтобы персонаж не "залип" в одну сторону при выключении
+        setTorsoCoords({ x: 0.5, y: 0.5 });
       }
     }
 
-    enableCam();
+    toggleCam();
 
     return () => {
       stopDetection();
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
+      if (stream) stream.getTracks().forEach((track) => track.stop());
     };
-  }, [isReady]);
+  }, [isReady, isCameraActive]); // Добавили зависимость от isCameraActive
 
   // 8. Стили анимации
   const doodleStyle = useAnimatedStyle(() => ({
