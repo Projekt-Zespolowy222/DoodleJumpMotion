@@ -1,6 +1,7 @@
 import React, {
   Ref,
   RefObject,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -207,16 +208,20 @@ export const GameScreen = ({
   useManageInput(isJumping, torsoCoords, velocityY, isOnPlatform, arenaConfig);
 
   // Функция для создания новых платформ при бесконечном цикле
-  const createNewPlatform = (platform: PlatformType) => {
-    const highestY = Math.min(...platforms.map((p) => p.y.value));
-    const safeJumpDistance = arenaConfig.jumpHeight * 4;
-    const gap = rndRef.current.range(50, Math.max(60, safeJumpDistance));
-    platform.y.value = highestY - gap;
-    platform.x.value = rndRef.current.range(
-      30,
-      width - arenaConfig.platformWidth - 30
-    );
-  };
+  const createNewPlatform = useCallback(
+    (platform: PlatformType) => {
+      const highestY = Math.min(...platforms.map((p) => p.y.value));
+      const safeJumpDistance = arenaConfig.jumpHeight * 3.5;
+      const gap = rndRef.current.range(60, safeJumpDistance);
+
+      platform.y.value = highestY - gap;
+      platform.x.value = rndRef.current.range(
+        30,
+        width - arenaConfig.platformWidth - 30
+      );
+    },
+    [platforms, arenaConfig.jumpHeight, arenaConfig.platformWidth]
+  );
 
   const moveSpeed = useRef(arenaConfig.moveSpeed);
 
@@ -616,19 +621,17 @@ const useManagePhysics = (
         return;
       }
 
-      // 1. Плавная камера (делаем в самом начале кадра)
-      const TARGET_SCREEN_Y = height * 0.75; // нижняя четверть экрана
-      const CAMERA_SMOOTHING = 0.12;
+      // 1. Плавная следящая камера (ВВЕРХ и ВНИЗ)
+      const TARGET_LINE = height * 0.5;
+      const doodleScreenY = y.value + cameraOffset.value;
+      const diff = TARGET_LINE - doodleScreenY;
 
-      if (y.value < TARGET_SCREEN_Y) {
-        const diff = TARGET_SCREEN_Y - y.value;
-        const step = diff * CAMERA_SMOOTHING;
+      cameraOffset.value += diff * 0.1;
 
-        cameraOffset.value += step;
-        y.value += step; // важно: двигаем игрока вместе с миром
-
-        const newScore = Math.floor(cameraOffset.value / 10);
-        if (newScore > score) setScore(newScore);
+      // ОБНОВЛЕННЫЙ БЛОК СЧЕТА:
+      const currentHeightScore = Math.floor(Math.abs(y.value) / 10);
+      if (currentHeightScore > score) {
+        setScore(currentHeightScore);
       }
 
       // 2. Горизонтальное движение
@@ -648,7 +651,6 @@ const useManagePhysics = (
       // 4. Проверка столкновения
       let foundCollision = false;
 
-      // Проверяем столкновение только при движении вниз
       if (nextVelocityY > 0) {
         const doodleBottomCurrent = y.value + config.doodleSize;
         const doodleBottomNext = nextY + config.doodleSize;
@@ -658,17 +660,19 @@ const useManagePhysics = (
         platforms.forEach((p, index) => {
           if (foundCollision) return;
 
-          // ВАЖНО: используем актуальный cameraOffset.value
-          const pTop = p.y.value + cameraOffset.value;
+          // Сравниваем МИРОВОЙ Y персонажа с МИРОВЫМ Y платформы
+          const pTop = p.y.value;
           const pLeft = p.x.value;
           const pRight = pLeft + config.platformWidth;
 
-          const wasAbove = doodleBottomCurrent <= pTop + 2; // Увеличили допуск до 2px
+          // Проверка: был ли персонаж выше платформы и окажется ли внутри/ниже её
+          const wasAbove = doodleBottomCurrent <= pTop + 5;
           const willBeBelow = doodleBottomNext >= pTop;
           const isWithinHorizontal =
             doodleRight > pLeft + 5 && doodleLeft < pRight - 5;
 
           if (wasAbove && willBeBelow && isWithinHorizontal) {
+            // Приземляем персонажа точно на платформу (в мировых координатах)
             y.value = pTop - config.doodleSize;
             velocityY.value = 0;
             (isOnPlatform as any).current = true;
@@ -692,17 +696,28 @@ const useManagePhysics = (
         }
       });
 
-      // 7. Смерть
-      if (y.value > height + 100) {
-        // Даем чуть больше места внизу
-        (gameOver as any).current = true;
+      // 7. Смерть (персонаж ниже видимой области камеры)
+      const screenY = y.value + cameraOffset.value;
+      if (screenY > height) {
+        // Если ушел за нижний край экрана
+        gameOver.current = true;
         publishDeath(userId);
         Alert.alert("Game Over", `Score: ${score}`);
       }
     }, 16);
 
     return () => clearInterval(interval);
-  }, [x, y, velocityY, config, score, userId]);
+  }, [
+    x,
+    y,
+    velocityY,
+    platforms,
+    cameraOffset,
+    config,
+    score,
+    userId,
+    createNewPlatform,
+  ]);
 };
 
 const useManageInput = (
