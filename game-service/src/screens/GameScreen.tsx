@@ -161,14 +161,19 @@ export const GameScreen = ({
     arenaConfig10,
   ];
 
+  const [opponentScore, setOpponentScore] = useState(0);
+
   const [isCameraActive, setIsCameraActive] = useState(true);
 
   const assets = arenaAssets[arenaId] ?? arenaAssets["1"];
 
   const arenaConfig = arenaConfigs[parseInt(arenaId, 10) - 1] ?? arenaConfig1;
   // 1. Подготовка данных и юзера
-  const { platformsData, isReady, userId } = useInitializeGame(seed, arenaId);
-  console.log("DEBUG: platformsData is:", platformsData);
+  const { platformsData, isReady, userId } = useInitializeGame(
+    seed,
+    arenaId,
+    setOpponentScore
+  );
 
   // 2. Рефы для игровых состояний (не вызывают ререндер)
   const moveDirection = useRef<"left" | "right" | null>(null);
@@ -363,7 +368,7 @@ export const GameScreen = ({
         muted
       />
 
-      <Score y={score} />
+      <Score y={score} opponentY={opponentScore} />
 
       <Animated.View style={[styles.doodleContainer, doodleStyle]}>
         {/* Передаем текстуру в Doodle */}
@@ -459,51 +464,75 @@ const styles = StyleSheet.create({
   },
 });
 
-const useInitializeGame = (seed: number, arenaId: string) => {
+const useInitializeGame = (
+  seed: number,
+  arenaId: string,
+  setOpponentScore: (s: number) => void
+) => {
   const platformPositions = useSeededPlatforms(seed);
   const [userId, setUserId] = useState<number>(0);
 
+  // Исправлено: Добавляем вычисление platformsData
   const platformsData = useMemo(() => {
     if (platformPositions && platformPositions.length >= 20) {
       return platformPositions;
     }
-    // Заглушка из 20 элементов с нулями
     return [];
   }, [platformPositions]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const userId = (window as any).USER_ID;
-      if (userId) {
-        setUserId(userId);
+      const id = (window as any).USER_ID;
+      if (id) {
+        setUserId(id);
       }
     }
   }, []);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const { type, userId: id } = event.data;
-      if (type === "INIT_GAME" && id) {
-        setUserId(id);
+      // Безопасный парсинг данных
+      let data;
+      try {
+        data =
+          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+      } catch (e) {
+        return; // Игнорируем сообщения, которые не являются JSON
+      }
+
+      if (data?.type === "opponent_score") {
+        const { user_id, score: remoteScore } = data.value;
+
+        // Принудительно приводим к Number для надежного сравнения
+        const myId = Number(userId);
+        const fromId = Number(user_id);
+
+        console.log("DEBUG WS:", {
+          type: data.type,
+          myId,
+          fromId,
+          remoteScore,
+          isDifferent: fromId !== myId,
+        });
+
+        // Обновляем счет только если это сообщение от ДРУГОГО игрока
+        if (fromId !== myId && myId !== 0) {
+          setOpponentScore(remoteScore);
+        }
       }
     };
 
     window.addEventListener("message", handleMessage);
-
-    // Проверка на случай, если данные уже есть в window
-    if ((window as any).USER_ID) {
-      setUserId((window as any).USER_ID);
-    }
-
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, [userId]); // Эффект перезапустится, как только userId изменится с 0 на реальный ID
 
-  // (Будущий шаг) Здесь мы будем доставать конфиг арены по arenaId
-  // const arenaConfig = useMemo(() => getArenaConfig(arenaId), [arenaId]);
-
-  return { platformsData, isReady: platformsData.length > 0, userId };
+  // Теперь platformsData существует и его можно вернуть
+  return {
+    platformsData,
+    isReady: platformsData.length > 0,
+    userId,
+  };
 };
-
 export const useManagePlatforms = (
   platformsData: { x: number; y: number }[] | undefined,
   seed: number

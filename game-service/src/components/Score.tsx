@@ -1,9 +1,9 @@
-// src/components/Score.tsx
-import React, { useEffect, useState } from "react";
-import { Text, StyleSheet, Platform as RNPlatform } from "react-native";
+import React from "react";
+import { Text, StyleSheet, Platform as RNPlatform, View } from "react-native";
 
 interface ScoreProps {
-  y: number; // текущий счет
+  y: number;
+  opponentY?: number;
 }
 
 const fontFamily = RNPlatform.select({
@@ -13,18 +13,36 @@ const fontFamily = RNPlatform.select({
   default: "sans-serif",
 });
 
-export const Score: React.FC<ScoreProps> = ({ y }) => {
-  return <Text style={styles.score}>Score: {y}</Text>;
+export const Score: React.FC<ScoreProps> = ({ y, opponentY }) => {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.score}>You: {y}</Text>
+      {opponentY !== undefined && (
+        <Text style={[styles.score, styles.opponent]}>
+          Opponent: {opponentY}
+        </Text>
+      )}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-  score: {
+  container: {
     position: "absolute",
     left: 16,
     top: 50,
+    zIndex: 100,
+  },
+  score: {
     fontSize: 18,
     color: "white",
     fontFamily,
-    zIndex: 100,
+    textShadowColor: "rgba(0, 0, 0, 0.75)",
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
+  },
+  opponent: {
+    color: "#FFD700", // Золотистый цвет для оппонента
+    marginTop: 4,
   },
 });

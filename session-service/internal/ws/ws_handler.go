@@ -110,32 +110,34 @@ func WSHandler(hub *Hub, sessionService *services.SessionService, matchCreator s
 
         switch payload["type"] {
         case "score":
-            score := int(payload["value"].(float64))
-            // 1. Получаем СВЕЖИЕ данные из БД перед обновлением
-            currentSession, err := sessionService.GetSession(sessionID)
-            if err != nil {
-                fmt.Printf("[WS] Error getting session: %v\n", err)
-                continue
-            }
+            // 1. Мгновенно извлекаем значение
+            scoreVal, ok := payload["value"].(float64)
+            if !ok { continue }
+            score := int(scoreVal)
 
-            if userID == currentSession.Player1ID {
-                currentSession.Player1Score = score
-            } else {
-                currentSession.Player2Score = score
-            }
-
-            // 2. Сохраняем
-            sessionService.UpdateSession(currentSession)
-
-            // 3. Рассылаем оппоненту
-            scoreMsg := fmt.Sprintf(`{"type":"opponent_score","value":{"user_id":%d,"score":%d}}`, userID, score)
+            // 2. СРАЗУ рассылаем оппоненту через хаб (без ожидания БД)
+            // Это обеспечит минимальную задержку
+            scoreMsg := fmt.Sprintf(`{"type":"score","userId":%d,"value":%d}`, userID, score)
             hub.Broadcast(sessionID, scoreMsg)
 
-            // 4. Проверяем конец игры на СВЕЖИХ данных
-            finished, winnerID := checkEndConditions(currentSession)
-            if finished {
-                finalizeSession(currentSession, winnerID, hub, sessionService, matchCreator, userClient)
-            }
+            // 3. Асинхронно или в фоновом режиме обновляем БД (чтобы не тормозить поток чтения)
+            go func(sid uint, uid uint, s int) {
+                currentSession, err := sessionService.GetSession(sid)
+                if err != nil { return }
+
+                if uid == currentSession.Player1ID {
+                    currentSession.Player1Score = s
+                } else {
+                    currentSession.Player2Score = s
+                }
+                sessionService.UpdateSession(currentSession)
+                
+                // Проверка условий конца игры тоже может быть здесь
+                finished, winnerID := checkEndConditions(currentSession)
+                if finished {
+                    finalizeSession(currentSession, winnerID, hub, sessionService, matchCreator, userClient)
+                }
+            }(sessionID, userID, score)
         case "player_death":
             currentSession, err := sessionService.GetSession(sessionID)
             if err != nil { continue }

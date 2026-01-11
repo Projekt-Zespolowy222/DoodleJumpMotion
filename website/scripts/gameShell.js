@@ -34,14 +34,43 @@ function openWS(sid) {
     ws.onmessage = (evt) => {
       try {
         const msg = JSON.parse(evt.data);
-        console.log("[WS] <--", msg);
-        if (msg.type === "seed") {
-          window.GAME_SEED = msg.value;
-          resolve(msg.value);
+        console.log("[WS] <--", msg); // Теперь вы увидите входящие счета!
+
+        const gameIframe = document.getElementById("gameIframe");
+        if (!gameIframe) return;
+
+        // Если пришел счет от сервера (не важно, ваш или чужой)
+        if (msg.type === "score" || msg.type === "opponent_score") {
+          // Извлекаем ID отправителя и значение
+          // Подстраиваемся под формат вашего Go: msg.value.score или msg.value
+          const scoreValue =
+            typeof msg.value === "object" ? msg.value.score : msg.value;
+          const senderId =
+            typeof msg.value === "object" ? msg.value.user_id : msg.userId;
+
+          // Пробрасываем в игру
+          gameIframe.contentWindow.postMessage(
+            {
+              type: "OPPONENT_SCORE", // Игра должна слушать этот тип!
+              value: scoreValue,
+              userId: senderId,
+            },
+            "*"
+          );
         }
-        window.dispatchEvent(new CustomEvent("ws-msg", { detail: msg }));
+
+        // Обработка смерти оппонента
+        if (msg.type === "opponent_death") {
+          gameIframe.contentWindow.postMessage(
+            {
+              type: "OPPONENT_DEATH",
+              userId: msg.value,
+            },
+            "*"
+          );
+        }
       } catch (e) {
-        console.warn("[WS] bad json", evt.data);
+        console.error("Ошибка парсинга сообщения:", e);
       }
     };
   });
