@@ -27,6 +27,7 @@ func main() {
 		AllowOrigins: []string{
 			"http://localhost:3000", // frontend
 			"http://localhost:8079", // Expo Web
+			"http://164.68.111.100:3000",
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
