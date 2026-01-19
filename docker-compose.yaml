@@ -366,11 +366,11 @@ services:
     networks:
       - doodle_net
     environment:
-      USER_SERVICE_URL: http://localhost:8085
-      SESSION_SERVICE_URL: http://localhost:8087
-      MATCHMAKER_SERVICE_URL: http://localhost:8088
-      GAME_DEV_URL: http://localhost:8079
-      SESSION_SERVICE_WS_URL: ws://localhost:8087/ws
+      USER_SERVICE_URL: http://164.68.111.100:8085
+      SESSION_SERVICE_URL: http://164.68.111.100:8087
+      MATCHMAKER_SERVICE_URL: http://164.68.111.100:8088
+      GAME_DEV_URL: http://164.68.111.100:8079
+      SESSION_SERVICE_WS_URL: ws://164.68.111.100:8087/ws
 
   #--------------------LeadeBoard--------------------
   leaderboard-service:
