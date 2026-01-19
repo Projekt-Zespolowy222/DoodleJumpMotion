@@ -1,5 +1,5 @@
 const API_URL = window.ENV.USER_SERVICE_URL;
-const LB_URL = "http://localhost:8089"; // leaderboard-service
+const LB_URL = "http://164.68.111.100:8089"; // leaderboard-service
 
 const token = localStorage.getItem("jwt");
 const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -25,7 +25,7 @@ async function loadLeaderboard() {
     // 2. Моё место
     if (user.user_id) {
       const rankRes = await fetch(
-        `${LB_URL}/leaderboard/rank?userId=${user.user_id}`
+        `${LB_URL}/leaderboard/rank?userId=${user.user_id}`,
       );
       const rankData = await rankRes.json();
       const myRank = rankData.rank || 0;

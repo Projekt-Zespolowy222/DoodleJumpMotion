@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
   <head>
     <meta charset="UTF-8" />
@@ -12,7 +12,7 @@
       const arenaId = params.get("arena_id") || "default";
 
       // Формируем URL для iframe с параметрами
-      const iframeSrc = `http://localhost:8079/?seed=${seed}&sessionId=${sessionId}&arena_id=${arenaId}`;
+      const iframeSrc = `http://164.68.111.100:8079/?seed=${seed}&sessionId=${sessionId}&arena_id=${arenaId}`;
       // Когда DOM загрузится, установим src
       window.onload = () => {
         document.getElementById("gameIframe").src = iframeSrc;

@@ -38,7 +38,7 @@ func main() {
 	repo := repository.NewArenaRepository(db)
 	userServiceURL := os.Getenv("USER_SERVICE_URL")
 	if userServiceURL == "" {
-		userServiceURL = "http://localhost:8080" // fallback для локального запуска
+		userServiceURL = "http://164.68.111.100:8080" // fallback для локального запуска
 	}
 	userService := services.NewUserServiceHTTP(userServiceURL)
 	service := services.NewArenaService(repo, userService)
@@ -57,6 +57,7 @@ func main() {
 			"http://127.0.0.1:5500", // frontend
 			"http://localhost:8079", // Expo Web
 			"http://164.68.111.100:3000",
+			"http://164.68.111.100:8079",
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
