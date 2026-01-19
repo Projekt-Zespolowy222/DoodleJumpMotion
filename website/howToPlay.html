@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jak grać - Doodle Jump Motion</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      /* Дополнительные стили для анимаций инструкции */
+      .tutorial-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-top: 40px;
+      }
+
+      .step-card {
+        background: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(12px);
+        border-radius: 24px;
+        padding: 32px;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        transition: transform 0.3s ease;
+      }
+
+      .step-card:hover {
+        transform: translateY(-10px);
+      }
+
+      .visual-demo {
+        height: 150px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 20px;
+        position: relative;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
+        overflow: hidden;
+      }
+
+      /* Анимация Дудла для примера */
+      .demo-doodle {
+        width: 40px;
+        height: 40px;
+        background: var(--accent);
+        border-radius: 8px;
+        position: absolute;
+      }
+
+      /* Анимация: Наклон влево-вправо */
+      .lean-anim {
+        animation: leanMove 3s infinite ease-in-out;
+      }
+      @keyframes leanMove {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-40px) rotate(-15sdeg);
+        }
+        75% {
+          transform: translateX(40px) rotate(15deg);
+        }
+      }
+
+      /* Анимация: Прыжок (приседание) */
+      .jump-anim {
+        animation: squatJump 2s infinite;
+      }
+      @keyframes squatJump {
+        0%,
+        100% {
+          transform: translateY(0) scaleY(1);
+        }
+        40% {
+          transform: translateY(20px) scaleY(0.7);
+        } /* Присед */
+        60% {
+          transform: translateY(-40px) scaleY(1.1);
+        } /* Прыжок */
+      }
+
+      .step-number {
+        background: var(--accent);
+        color: white;
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-weight: bold;
+        margin-bottom: 12px;
+      }
+
+      .camera-hint {
+        font-size: 13px;
+        color: #ff8c00;
+        margin-top: 10px;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <div class="logo">
+          <img src="logo.png" alt="Logo" />
+          <div class="brand">
+            <div class="brand-title">Doodle Jump Motion</div>
+          </div>
+        </div>
+        <nav class="main-nav">
+          <a href="index.html">Powrót</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <h1>Jak sterować ruchem?</h1>
+        <p>
+          Twoje ciało jest kontrolerem. Upewnij się, że jesteś w dobrze
+          oświetlonym miejscu.
+        </p>
+
+        <div class="tutorial-grid">
+          <div class="step-card">
+            <div class="step-number">1</div>
+            <div class="visual-demo">
+              <div style="font-size: 40px">📷</div>
+            </div>
+            <h3>Włącz kamerę</h3>
+            <p>
+              Zezwól przeglądarce na dostęp do kamery. Stań w odległości 1-2
+              metrów.
+            </p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">2</div>
+            <div class="visual-demo">
+              <div class="demo-doodle lean-anim"></div>
+            </div>
+            <h3>Ruch lewo/prawo</h3>
+            <p>Przechylaj tułów w lewo lub w prawo, aby sterować postacią.</p>
+            <div class="camera-hint">
+              Wskazówka: Im większy przechył, tym szybszy ruch!
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">3</div>
+            <div class="visual-demo">
+              <div class="demo-doodle jump-anim"></div>
+            </div>
+            <h3>Skok (Przykuc)</h3>
+            <p>Aby skoczyć z platformy, wykonaj szybki, krótki przysiad.</p>
+          </div>
+        </div>
+
+        <div style="margin-top: 40px">
+          <a href="index.html" class="btn-primary">Rozumiem, zaczynajmy!</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

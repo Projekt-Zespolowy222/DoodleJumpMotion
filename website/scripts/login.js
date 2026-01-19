@@ -17,7 +17,7 @@ async function login(email, password) {
     localStorage.setItem("jwt", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
 
-    window.location.href = "index.html";
+    window.location.href = "howToPlay.html";
   } catch (err) {
     alert(err.message);
   }
