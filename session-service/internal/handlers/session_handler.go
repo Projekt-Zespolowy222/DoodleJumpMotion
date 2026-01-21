@@ -19,7 +19,7 @@ import (
 )
 
 type SessionHandler struct {
-    service *services.SessionService
+    Service *services.SessionService
 	userClient *clients.UserClient
 	hub     *ws.Hub
 }
@@ -42,7 +42,7 @@ func NewSessionHandler() *SessionHandler {
 	repo := repositories.NewSessionRepository()
 	service := services.NewSessionService(repo)
 	userClient := clients.NewUserClient()
-	return &SessionHandler{service: service, userClient: userClient}
+	return &SessionHandler{Service: service, userClient: userClient}
 }
 
 func (h *SessionHandler) CreateSession(c *gin.Context) {
@@ -65,7 +65,7 @@ func (h *SessionHandler) CreateSession(c *gin.Context) {
         return
     }
 
-    if err := h.service.CreateSession(&session); err != nil {
+    if err := h.Service.CreateSession(&session); err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
@@ -81,7 +81,7 @@ func (h *SessionHandler) GetSession(c *gin.Context) {
         return
     }
 
-    session, err := h.service.GetSession(uint(id))
+    session, err := h.Service.GetSession(uint(id))
     if err != nil {
         c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
         return
@@ -167,7 +167,7 @@ func (h *SessionHandler) LeaveSession(c *gin.Context) {
     sessionIDStr := c.Param("id")
     sessionID, _ := strconv.ParseUint(sessionIDStr, 10, 64)
 
-    if err := h.service.LeaveSession(uint(sessionID), body.PlayerID); err != nil {
+    if err := h.Service.LeaveSession(uint(sessionID), body.PlayerID); err != nil {
         c.JSON(500, gin.H{"error": err.Error()})
         return
     }
@@ -197,7 +197,7 @@ func (h *SessionHandler) FinishSession(c *gin.Context) {
         return
     }
 
-    session, err := h.service.GetSession(uint(sessionID))
+    session, err := h.Service.GetSession(uint(sessionID))
     if err != nil {
         c.JSON(404, gin.H{"error": "session not found"})
         return
@@ -267,7 +267,7 @@ func (h *SessionHandler) FinishSession(c *gin.Context) {
     session.Status = "finished"
     session.StartedAt = nil
     session.EndedAt = ptrTime(time.Now()) // helper функция ptrTime(t time.Time) *time.Time
-    if err := h.service.UpdateSession(session); err != nil {
+    if err := h.Service.UpdateSession(session); err != nil {
         c.JSON(500, gin.H{"error": "failed to update session"})
         return
     }
