@@ -12,7 +12,7 @@
       const arenaId = params.get("arena_id") || "default";
 
       // Формируем URL для iframe с параметрами
-      const iframeSrc = `http://164.68.111.100:8079/?seed=${seed}&sessionId=${sessionId}&arena_id=${arenaId}`;
+      const iframeSrc = `https://doodlejumpmotion.duckdns.org/game-view/?seed=${seed}&sessionId=${sessionId}&arena_id=${arenaId}`;
       // Когда DOM загрузится, установим src
       window.onload = () => {
         document.getElementById("gameIframe").src = iframeSrc;

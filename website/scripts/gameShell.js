@@ -23,7 +23,7 @@ function openWS(sid) {
     // headers НЕЛЬЗЯ ставить во второй параметр new WebSocket
     // для браузеров они передаются ЧЕРЕЗ query-string
     const url = `${SESSION_SERVICE_WS}?session_id=${sid}&token=${encodeURIComponent(
-      getJwt()
+      getJwt(),
     )}`;
     ws = new WebSocket(url); // ← второй параметр убрали
 
@@ -55,7 +55,7 @@ function openWS(sid) {
               value: scoreValue,
               userId: senderId,
             },
-            "*"
+            "*",
           );
         }
 
@@ -66,7 +66,7 @@ function openWS(sid) {
               type: "OPPONENT_DEATH",
               userId: msg.value,
             },
-            "*"
+            "*",
           );
         }
       } catch (e) {
@@ -122,7 +122,7 @@ async function connectToReadySession() {
         seed: seed,
         userId: userId,
       },
-      "*"
+      "*",
     );
   };
 

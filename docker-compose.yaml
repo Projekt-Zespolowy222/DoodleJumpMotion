@@ -22,8 +22,6 @@ services:
       POSTGRES_USER: daniil
       POSTGRES_PASSWORD: Admin
       POSTGRES_DB: user_service_db_doodleJumpMotion
-    ports:
-      - "5436:5432"
     volumes:
       - pg_user_data:/var/lib/postgresql/data
       - ./initdb.d/01-user-service.sql:/docker-entrypoint-initdb.d/01-user-service.sql
@@ -48,8 +46,6 @@ services:
       POSTGRES_USER: daniil
       POSTGRES_PASSWORD: Admin
       POSTGRES_DB: arenas_service_db_doodleJumpMotion
-    ports:
-      - "5437:5432" # хост:5433 → контейнер:5432
     volumes:
       - pg_arenas_data:/var/lib/postgresql/data
       - ./initdb.d/02-arenas-service.sql:/docker-entrypoint-initdb.d/02-arenas-service.sql
@@ -65,8 +61,6 @@ services:
       POSTGRES_USER: daniil
       POSTGRES_PASSWORD: Admin
       POSTGRES_DB: sessions_service_db_doodleJumpMotion
-    ports:
-      - "5438:5432"
     volumes:
       - pg_session_data:/var/lib/postgresql/data
       - ./initdb.d/03-session-service.sql:/docker-entrypoint-initdb.d/03-session-service.sql
@@ -91,8 +85,6 @@ services:
       POSTGRES_USER: daniil
       POSTGRES_PASSWORD: Admin
       POSTGRES_DB: matchmaker_service_db_doodleJumpMotion
-    ports:
-      - "5439:5432"
     volumes:
       - pg_matchmaker_data:/var/lib/postgresql/data
     networks:
@@ -115,8 +107,6 @@ services:
       POSTGRES_USER: daniil
       POSTGRES_PASSWORD: Admin
       POSTGRES_DB: leaderboard_service_db_doodleJumpMotion
-    ports:
-      - "5440:5432"
     volumes:
       - pg_leaderboard_data:/var/lib/postgresql/data
     networks:
@@ -136,8 +126,6 @@ services:
     image: redis:7-alpine
     container_name: doodle_redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     networks:
       - doodle_net
     healthcheck:
@@ -151,9 +139,6 @@ services:
     image: nats:alpine
     container_name: doodle_nats
     restart: unless-stopped
-    ports:
-      - "4222:4222"
-      - "8222:8222"
     networks:
       - doodle_net
     healthcheck:
@@ -185,8 +170,6 @@ services:
       DB_PASSWORD: Admin
       DB_NAME: user_service_db_doodleJumpMotion
       INTERNAL_API_TOKEN: super_secret_token_123
-    ports:
-      - "8085:8080"
     networks:
       - doodle_net
     healthcheck:
@@ -220,8 +203,6 @@ services:
       DB_USER: daniil
       DB_PASSWORD: Admin
       DB_NAME: arenas_service_db_doodleJumpMotion
-    ports:
-      - "8086:8081"
     networks:
       - doodle_net
     healthcheck:
@@ -257,9 +238,7 @@ services:
       DB_PASSWORD: Admin
       DB_NAME: sessions_service_db_doodleJumpMotion
       DB_SSLMODE: disable
-      USER_SERVICE_URL: http://doodle_user_service:8080
-    ports:
-      - "8087:8083"
+      USER_SERVICE_URL: http://user-service:8080
     networks:
       - doodle_net
     healthcheck:
@@ -302,8 +281,6 @@ services:
       REDIS_ADDR: redis:6379
       NATS_URL: nats://nats:4222
       SESSION_URL: http://session-service:8083/sessions/
-    ports:
-      - "8088:8084"
     networks:
       - doodle_net
     healthcheck:
@@ -327,13 +304,10 @@ services:
       context: ./game-service
       dockerfile: Dockerfile.dev
     container_name: doodle_game_dev
-    ports:
-      - "8079:8079"
-      - "19000:19000"
     environment:
       NODE_OPTIONS: "--max-old-space-size=4096"
       EXPO_DEVTOOLS_LISTEN_ADDRESS: 0.0.0.0
-      EXPO_PUBLIC_PARENT_ORIGIN: ${PARENT_ORIGIN:-http://localhost:3000}
+      EXPO_PUBLIC_PARENT_ORIGIN: https://doodlejumpmotion.duckdns.org
       EXPO_PUBLIC_USER_SERVICE: http://user-service:8080
       EXPO_PUBLIC_SESSION_SERVICE: http://session-service:8083
       EXPO_PUBLIC_ARENAS_SERVICE: http://arenas-service:8081
@@ -361,16 +335,15 @@ services:
       context: ./website # папка c index.html и пр.
       dockerfile: Dockerfile
     container_name: doodle_frontend
-    ports:
-      - "3000:80"
     networks:
       - doodle_net
     environment:
-      USER_SERVICE_URL: http://164.68.111.100:8085
-      SESSION_SERVICE_URL: http://164.68.111.100:8087
-      MATCHMAKER_SERVICE_URL: http://164.68.111.100:8088
-      GAME_DEV_URL: http://164.68.111.100:8079
-      SESSION_SERVICE_WS_URL: ws://164.68.111.100:8087/ws
+      USER_SERVICE_URL: https://doodlejumpmotion.duckdns.org/api/user
+      SESSION_SERVICE_URL: https://doodlejumpmotion.duckdns.org/api/session
+      MATCHMAKER_SERVICE_URL: https://doodlejumpmotion.duckdns.org/api/matchmaker
+      GAME_DEV_URL: https://doodlejumpmotion.duckdns.org/game-view
+      SESSION_SERVICE_WS_URL: wss://doodlejumpmotion.duckdns.org/ws
+      ARENA_SERVICE: https://doodlejumpmotion.duckdns.org/api/arena
 
   #--------------------LeadeBoard--------------------
   leaderboard-service:
@@ -392,7 +365,29 @@ services:
       DB_USER: daniil
       DB_PASSWORD: Admin
       DB_NAME: leaderboard_service_db_doodleJumpMotion
-    ports:
-      - "8089:8080"
     networks:
       - doodle_net
+
+  nginx-main:
+    image: nginx:stable-alpine
+    container_name: doodle_nginx_ssl
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./gateway.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    networks:
+      - doodle_net
+    depends_on:
+      - frontend
+      - game-dev
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"

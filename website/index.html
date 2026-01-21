@@ -70,8 +70,8 @@
   </body>
 
   <script>
-    const MM_URL = "http://164.68.111.100:8088"; // matchmaker
-    const USER_URL = "http://164.68.111.100:8085"; // user-service (для JWT)
+    const MM_URL = `https://doodlejumpmotion.duckdns.org/api/matchmaker`; // matchmaker
+    const USER_URL = "https://doodlejumpmotion.duckdns.org/api/user"; // user-service (для JWT)
 
     const token = localStorage.getItem("jwt"); // после логина сохраняете туда же
     let pollInterval;
