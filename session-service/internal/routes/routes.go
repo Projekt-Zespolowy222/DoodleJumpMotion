@@ -30,5 +30,4 @@ func RegisterRoutes(r *gin.Engine, hub *ws.Hub) {
         matchRoutes.GET("/:id", matchHandler.GetMatch)
         // Добавишь остальные методы
     }
-    r.GET("/ws", ws.WSHandler(hub, sessionHandler.Service, matchHandler))
 }
