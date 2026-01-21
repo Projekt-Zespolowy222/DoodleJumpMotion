@@ -51,6 +51,7 @@
       ]
     ],
     "experiments": {
+      "baseUrl": "/game-view",
       "typedRoutes": true,
       "reactCompiler": true
     }
