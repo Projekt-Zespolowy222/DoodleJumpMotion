@@ -51,11 +51,14 @@ func main() {
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"http://localhost:3000", //front
-			"http://localhost:8085", //user service
-			"http://164.68.111.100:3000",
-			"http://164.68.111.100:8085", //user service
-		},
+        "https://164-68-111-100.sslip.io", // Основной домен (Nginx)
+        "http://164.68.111.100",           // Прямой IP (HTTP)
+        "http://164.68.111.100:3000",      // Фронтенд напрямую
+        "http://164.68.111.100:8079",      // Игра напрямую
+        "http://localhost:3000",           // Локалка фронт
+        "http://localhost:8079",           // Локалка игра
+        "http://127.0.0.1:5500",           // Live Server VS Code
+    	},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},

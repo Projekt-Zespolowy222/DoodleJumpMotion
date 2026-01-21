@@ -1,5 +1,5 @@
 const API_URL = window.ENV.USER_SERVICE_URL;
-const ARENA_URL = "https://doodlejumpmotion.duckdns.org/api/arena/"; // URL сервиса арен
+const ARENA_URL = "https://164-68-111-100.sslip.io/api/arena/"; // URL сервиса арен
 
 async function loadUserData() {
   const token = localStorage.getItem("jwt");

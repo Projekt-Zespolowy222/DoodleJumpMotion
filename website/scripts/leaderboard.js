@@ -1,5 +1,5 @@
 const API_URL = window.ENV.USER_SERVICE_URL;
-const LB_URL = "https://doodlejumpmotion.duckdns.org/api/leaderboard/"; // leaderboard-service
+const LB_URL = "https://164-68-111-100.sslip.io/api/leaderboard/"; // leaderboard-service
 
 const token = localStorage.getItem("jwt");
 const user = JSON.parse(localStorage.getItem("user") || "{}");
