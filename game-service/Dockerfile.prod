@@ -20,6 +20,13 @@ COPY scripts/gameShell.js ./dist/scripts/gameShell.js
 FROM nginx:alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+RUN mv /usr/share/nginx/html/config.js /usr/share/nginx/html/config.js.template
+
+RUN echo '#!/bin/sh' > /docker-entrypoint.d/00-subst-env.sh && \
+    echo 'envsubst "${USER_SERVICE_URL} ${SESSION_SERVICE_URL} ${SESSION_SERVICE_WS_URL} ${MATCHMAKER_SERVICE_URL} ${GAME_DEV_URL}" < /usr/share/nginx/html/config.js.template > /usr/share/nginx/html/config.js' >> /docker-entrypoint.d/00-subst-env.sh && \
+    chmod +x /docker-entrypoint.d/00-subst-env.sh
+
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

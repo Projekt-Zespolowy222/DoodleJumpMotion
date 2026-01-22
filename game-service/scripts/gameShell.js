@@ -127,8 +127,10 @@ async function connectToReadySession() {
   };
 
   if (gameIframe.contentWindow) {
+    console.log("AP: ", gameIframe.contentWindow);
     sendInitData();
   } else {
+    console.log("AP onload: ", gameIframe.contentWindow);
     gameIframe.onload = sendInitData;
   }
 
