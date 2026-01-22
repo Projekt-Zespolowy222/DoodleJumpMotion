@@ -1,7 +1,7 @@
 window.ENV = {
-  USER_SERVICE_URL: "${USER_SERVICE_URL}",
-  SESSION_SERVICE_URL: "${SESSION_SERVICE_URL}",
-  SESSION_SERVICE_WS_URL: "${SESSION_SERVICE_WS_URL}",
-  MATCHMAKER_SERVICE_URL: "${MATCHMAKER_SERVICE_URL}",
-  GAME_DEV_URL: "${GAME_DEV_URL}",
+  USER_SERVICE_URL: "https://164-68-111-100.sslip.io/api/user",
+  SESSION_SERVICE_URL: "https://164-68-111-100.sslip.io/api/session",
+  SESSION_SERVICE_WS_URL: "wss://164-68-111-100.sslip.io/ws",
+  MATCHMAKER_SERVICE_URL: "https://164-68-111-100.sslip.io/api/matchmaker",
+  GAME_DEV_URL: "https://164-68-111-100.sslip.io/game-view",
 };
