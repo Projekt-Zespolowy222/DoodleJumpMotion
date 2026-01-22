@@ -313,6 +313,8 @@ services:
       - GAME_DEV_URL=https://164-68-111-100.sslip.io/game-view
     networks:
       - doodle_net
+    volumes:
+      - ./default.conf:/etc/nginx/conf.d/default.conf:ro
 
   frontend:
     build:
@@ -367,7 +369,6 @@ services:
       - doodle_net
     depends_on:
       - frontend
-      - game-dev
 
   certbot:
     image: certbot/certbot
