@@ -298,38 +298,22 @@ services:
       retries: 5
       start_period: 15s
 
-  # --------------- GAME (dev, hot-reload) ---------------
-  game-dev:
+  # --------------- GAME (prod, статика) ---------------
+  # раскомментируй когда понадобится продакшен
+  game-prod:
     build:
       context: ./game-service
-      dockerfile: Dockerfile.dev
-    container_name: doodle_game_dev
+      dockerfile: Dockerfile.prod
+    container_name: doodle_game_prod
     environment:
-      NODE_OPTIONS: "--max-old-space-size=4096"
-      EXPO_DEVTOOLS_LISTEN_ADDRESS: 0.0.0.0
-      EXPO_PUBLIC_PARENT_ORIGIN: https://164-68-111-100.sslip.io
-      EXPO_PUBLIC_USER_SERVICE: https://164-68-111-100.sslip.io/api/user
-      EXPO_PUBLIC_SESSION_SERVICE: https://164-68-111-100.sslip.io/api/session
-      EXPO_PUBLIC_ARENAS_SERVICE: https://164-68-111-100.sslip.io/api/arena
-      EXPO_PUBLIC_MATCHMAKER_SERVICE: https://164-68-111-100.sslip.io/api/matchmaker
-    volumes:
-      - ./game-service:/app
-      - /app/node_modules
+      - USER_SERVICE_URL=https://164-68-111-100.sslip.io/api/user
+      - SESSION_SERVICE_URL=https://164-68-111-100.sslip.io/api/session
+      - SESSION_SERVICE_WS_URL=wss://164-68-111-100.sslip.io/ws
+      - MATCHMAKER_SERVICE_URL=https://164-68-111-100.sslip.io/api/matchmaker
+      - GAME_DEV_URL=https://164-68-111-100.sslip.io/game-view
     networks:
       - doodle_net
 
-  # --------------- GAME (prod, статика) ---------------
-  # раскомментируй когда понадобится продакшен
-  # game-prod:
-  #   build:
-  #     context: ./game-service
-  #     dockerfile: Dockerfile.prod
-  #   container_name: doodle_game_prod
-  #   ports:
-  #     - "8090:80"
-  #   networks:
-  #     - doodle_net
-  # --------------- FRONTEND (статика) ---------------
   frontend:
     build:
       context: ./website # папка c index.html и пр.
