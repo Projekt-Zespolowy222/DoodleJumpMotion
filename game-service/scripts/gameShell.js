@@ -1,4 +1,4 @@
-// конфиг
+// конфиг ОБНОВЛЕННЫЙ game.prod
 const SESSION_SERVICE_HTTP = window.ENV.SESSION_SERVICE_URL;
 const SESSION_SERVICE_WS = window.ENV.SESSION_SERVICE_WS_URL;
 
