@@ -22,7 +22,7 @@ function openWS(sid) {
   return new Promise((resolve, reject) => {
     // headers НЕЛЬЗЯ ставить во второй параметр new WebSocket
     // для браузеров они передаются ЧЕРЕЗ query-string
-    const url = `${SESSION_SERVICE_WS_URL}?session_id=${sid}&token=${encodeURIComponent(
+    const url = `${SESSION_SERVICE_WS}?session_id=${sid}&token=${encodeURIComponent(
       getJwt(),
     )}`;
     ws = new WebSocket(url); // ← второй параметр убрали
