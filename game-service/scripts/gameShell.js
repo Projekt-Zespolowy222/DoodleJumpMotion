@@ -25,9 +25,13 @@ function openWS(sid) {
     const url = `${SESSION_SERVICE_WS}?session_id=${sid}&token=${encodeURIComponent(
       getJwt(),
     )}`;
+    console.log("[WS] Connecting to:", url);
     ws = new WebSocket(url); // ← второй параметр убрали
 
-    ws.onopen = () => console.log("[WS] connected");
+    ws.onopen = () => {
+      console.log("[WS] connected");
+      resolve();
+    };
     ws.onerror = (e) => reject(e);
     ws.onclose = () => console.log("[WS] closed");
 
