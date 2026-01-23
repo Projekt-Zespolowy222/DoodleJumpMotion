@@ -1,6 +1,6 @@
 // конфиг ОБНОВЛЕННЫЙ website
-const SESSION_SERVICE_HTTP = window.ENV.SESSION_SERVICE_URL;
-const SESSION_SERVICE_WS = window.ENV.SESSION_SERVICE_WS_URL;
+const SESSION_SERVICE_HTTP = "https://164-68-111-100.sslip.io/api/session";
+const SESSION_SERVICE_WS = "wss://164-68-111-100.sslip.io/ws";
 
 // ------- helpers -------
 const getJwt = () => localStorage.getItem("jwt");
@@ -139,7 +139,7 @@ async function connectToReadySession() {
 
   // 3. прокси postMessage от игры
   window.addEventListener("message", (e) => {
-    if (e.origin !== window.ENV.GAME_DEV_URL) return;
+    if (e.origin !== "https://164-68-111-100.sslip.io/game-view") return;
     const { type, value } = e.data;
     if (type === "score") sendScore(value);
     if (type === "death") sendDeath(value);

@@ -1,4 +1,6 @@
-const API_URL = window.ENV.USER_SERVICE_URL;
+//const API_URL = window.ENV.USER_SERVICE_URL;
+//HardCode version:
+const API_URL = "https://164-68-111-100.sslip.io/api/user";
 
 async function register(username, email, password) {
   try {
