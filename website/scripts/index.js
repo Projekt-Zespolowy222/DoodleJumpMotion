@@ -1,7 +1,7 @@
 //const API_URL = window.ENV.USER_SERVICE_URL;
 //HardCode version:
 const API_URL = "https://164-68-111-100.sslip.io/api/user";
-const ARENA_URL = "https://164-68-111-100.sslip.io/api/arena/"; // URL сервиса арен
+const ARENA_URL = "https://164-68-111-100.sslip.io/api/arena"; // URL сервиса арен
 
 async function loadUserData() {
   const token = localStorage.getItem("jwt");
@@ -34,21 +34,30 @@ async function loadUserData() {
     `;
 
     // Получение информации об арене
-    if (user.current_arenaid) {
-      const arenaRes = await fetch(
-        `${ARENA_URL}/arena/${user.current_arenaid}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+    if (user.current_arenaid && user.current_arenaid !== 0) {
+      try {
+        const arenaRes = await fetch(
+          `${ARENA_URL}/${user.current_arenaid}`, // убрал лишний /arena/
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
 
-      if (!arenaRes.ok)
-        throw new Error("Nie udało się pobrać informacji o arenie");
+        if (!arenaRes.ok) throw new Error("Arena not found");
 
-      const arena = await arenaRes.json();
-      document.getElementById("current-arena-name").textContent = arena.name;
-      document.getElementById("current-arena-description").textContent =
-        arena.theme;
+        const arena = await arenaRes.json();
+        document.getElementById("current-arena-name").textContent = arena.name;
+        document.getElementById("current-arena-description").textContent =
+          arena.theme;
+      } catch (err) {
+        // Если арена не загрузилась - просто показываем "Nieznana", не разлогиниваем!
+        console.error("Błąd ładowania areny:", err);
+        document.getElementById("current-arena-name").textContent = "Nieznana";
+        document.getElementById("current-arena-description").textContent = "-";
+      }
+    } else {
+      document.getElementById("current-arena-name").textContent = "Brak";
+      document.getElementById("current-arena-description").textContent = "-";
     }
   } catch (err) {
     console.error(err);

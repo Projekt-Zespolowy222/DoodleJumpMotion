@@ -15,7 +15,7 @@ func RegisterRoutes(db *gorm.DB, r *gin.Engine) {
 
     r.POST("/auth/register", authHandler.Register)
     r.POST("/auth/login", authHandler.Login)
-    r.GET("/profile", IdMiddleware(), ProfileHandler)
+    r.GET("/profile", IdMiddleware(), ProfileHandler(userService))
     r.GET("/users/:id", AuthMiddleware(), GetUserByIDHandler(userService))
 
     internal := r.Group("/users")
