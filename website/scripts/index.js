@@ -34,10 +34,10 @@ async function loadUserData() {
     `;
 
     // Получение информации об арене
-    if (user.current_arenaid && user.current_arenaid !== 0) {
+    if (user.cup_count >= 0) {
       try {
         const arenaRes = await fetch(
-          `${ARENA_URL}/${user.current_arenaid}`, // убрал лишний /arena/
+          `${ARENA_URL}/${user.cup_count}`, // убрал лишний /arena/,
           {
             headers: { Authorization: `Bearer ${token}` },
           },
