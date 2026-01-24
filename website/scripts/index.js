@@ -1,12 +1,11 @@
-//const API_URL = window.ENV.USER_SERVICE_URL;
-//HardCode version:
-const API_URL = "https://164-68-111-100.sslip.io/api/user";
-const ARENA_URL = "https://164-68-111-100.sslip.io/api/arena"; // URL сервиса арен
+const API_URL = "https://164-68-111-100.sslip.io/api/user ";
+const ARENA_URL = "https://164-68-111-100.sslip.io/api/arena ";
 
 async function loadUserData() {
   const token = localStorage.getItem("jwt");
   const container = document.getElementById("user-info");
   const arenaContainer = document.getElementById("arena-info");
+
   if (!container || !arenaContainer) return;
 
   if (!token) {
@@ -33,15 +32,12 @@ async function loadUserData() {
       <p><strong>Obecna arena:</strong> ${user.current_arenaid}</p>
     `;
 
-    // Получение информации об арене
+    // Получение информации об арене - ИСПРАВЛЕННЫЙ БЛОК
     if (user.current_arenaid && user.current_arenaid !== 0) {
       try {
-        const arenaRes = await fetch(
-          `${ARENA_URL}/${user.current_arenaid}`, // убрал лишний /arena/
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
+        const arenaRes = await fetch(`${ARENA_URL}/${user.current_arenaid}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (!arenaRes.ok) throw new Error("Arena not found");
 
@@ -50,7 +46,6 @@ async function loadUserData() {
         document.getElementById("current-arena-description").textContent =
           arena.theme;
       } catch (err) {
-        // Если арена не загрузилась - просто показываем "Nieznana", не разлогиниваем!
         console.error("Błąd ładowania areny:", err);
         document.getElementById("current-arena-name").textContent = "Nieznana";
         document.getElementById("current-arena-description").textContent = "-";

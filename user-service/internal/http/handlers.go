@@ -21,6 +21,21 @@ type LoginInput struct {
 	Password string `json:"password"`
 }
 
+func CalculateArenaByCups(cups int) int {
+    switch {
+    case cups >= 0 && cups <= 499: return 1
+    case cups >= 500 && cups <= 999: return 2
+    case cups >= 1000 && cups <= 1499: return 3
+    case cups >= 1500 && cups <= 1999: return 4
+    case cups >= 2000 && cups <= 2499: return 5
+    case cups >= 2500 && cups <= 2999: return 6
+    case cups >= 3000 && cups <= 3499: return 7
+    case cups >= 3500 && cups <= 3999: return 8
+    case cups >= 4000 && cups <= 4499: return 9
+    default: return 10
+    }
+}
+
 func NewAuthHandler(userService *services.UserService) *AuthHandler {
 	return &AuthHandler{userService: userService}
 }
@@ -169,6 +184,12 @@ func (h *AuthHandler) UpdateCups(c *gin.Context) {
         user.CupCount = 0
     }
 
+    user.CurrentArenaID = CalculateArenaByCups(user.CupCount)
+
+    if user.CupCount > user.HighestCups {
+        user.HighestCups = user.CupCount
+    }
+
     if err := h.userService.UpdateUser(user); err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user"})
         return
@@ -177,6 +198,7 @@ func (h *AuthHandler) UpdateCups(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{
         "id":        user.ID,
         "new_cups":  user.CupCount,
+        "arena_id":  user.CurrentArenaID,
     })
 
     go func(userID int64, newCups int) {

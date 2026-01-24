@@ -31,6 +31,15 @@ func main() {
 	}
 	fmt.Println("Users table migrated successfully!")
 
+	var users []domain.User
+	db.Find(&users)
+	for _, u := range users {
+    	if u.CurrentArenaID == 0 && u.CupCount >= 0 {
+        	u.CurrentArenaID = http.CalculateArenaByCups(u.CupCount)
+        	db.Save(&u)
+    	}
+	}
+
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
