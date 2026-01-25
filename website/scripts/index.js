@@ -30,7 +30,6 @@ async function loadUserData() {
       <p><strong>Doświadczenie:</strong> ${user.experience}</p>
       <p><strong>Punkty:</strong> ${user.cup_count}</p>
       <p><strong>Najwyższe punkty:</strong> ${user.highest_cups}</p>
-      <p><strong>Obecna arena:</strong> ${user.current_arenaid}</p>
     `;
 
     // Получение информации об арене
@@ -66,5 +65,3 @@ async function loadUserData() {
     window.location.href = "login.html";
   }
 }
-
-document.addEventListener("DOMContentLoaded", loadUserData);

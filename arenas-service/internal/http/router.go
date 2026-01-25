@@ -16,6 +16,7 @@ func SetupRouter(arenaHandler *handlers.ArenaHandler) *gin.Engine {
 	r.GET("/arena/:cups", arenaHandler.GetArenaByCups)
 	r.GET("/api/arena/:cups", arenaHandler.GetArenaByCups)
 	r.GET("/arenas", arenaHandler.GetAllArenas)
+	r.GET("/:cups", arenaHandler.GetArenaByCups)
 
 	// secure endpoints
 	auth := r.Group("/")
