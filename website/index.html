@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Trening – Doodle Jump Motion</title>
+    <title>Doodle Jump Motion</title>
     <link rel="stylesheet" href="style.css" />
     <script src="config.js?v=2"></script>
     <script src="scripts/index.js" defer></script>
@@ -15,35 +15,52 @@
           <img src="logo.png" alt="Doodle Jump Motion" />
           <div class="brand">
             <div class="brand-title">Doodle Jump Motion</div>
-            <div class="brand-sub">Tryb Singleplayer</div>
+            <div class="brand-sub">Futurystyczna wersja Doodle Jump</div>
           </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 20px;">
-            <nav class="main-nav">
-              <a href="welcome.html">Zmień tryb</a>
-            </nav>
-
-            <div class="profile-widget">
-                <div class="profile-icon-container">
-                    <span class="profile-avatar">👤</span> 
-                </div>
-                <div class="profile-dropdown" id="profile-dropdown-content"></div>
-            </div>
-        </div>
+        <nav class="main-nav">
+          <a href="game.html">Zagraj</a>
+          <a href="login.html">Logowanie</a>
+          <a href="register.html">Rejestracja</a>
+          <a href="leaderboard.html">Ranking</a>
+        </nav>
       </div>
     </header>
 
     <main class="container">
       <section class="hero">
-        <h1>Trening Solo</h1>
-        <p>Wybierz mapę i przetestuj sterowanie.</p>
+        <h1>Wskocz do gry przyszłości</h1>
+        <p>
+          Steruj swoją postacią za pomocą ruchu ciała dzięki kamerze!
+          Futurystyczna odsłona klasycznego Doodle Jump.
+        </p>
 
-        <div id="dashboard-container"></div>
-
-        <div style="margin-top: 30px;">
-            <button id="actionBtn" class="btn-primary">Rozpocznij Trening</button>
+        <div id="user-info"><!-- сюда вставится username после логина --></div>
+        <div id="arena-info">
+          <p>
+            <strong>Obecna arena:</strong> <span id="current-arena-name"></span>
+          </p>
+          <p>
+            <strong>Opis:</strong> <span id="current-arena-description"></span>
+          </p>
         </div>
+        <div id="auth-error" style="color: red; display: none">
+          Nie udało się pobrać danych użytkownika.
+          <a href="login.html">Zaloguj się ponownie</a>
+        </div>
+
+        <!-- БЛОК МАТЧМЕЙКИНГА -->
+        <div
+          id="matchStatus"
+          style="margin: 1rem 0; color: #353535; font-weight: bold"
+        >
+          Kliknij „Zagraj”, aby znaleźć przeciwnika.
+        </div>
+        <button id="findMatchBtn" class="btn-primary">Zagraj</button>
+        <button id="connectBtn" class="btn-primary" style="display: none">
+          Dołącz do gry
+        </button>
       </section>
     </main>
 
@@ -51,4 +68,64 @@
       <div class="container">© 2025 Doodle Jump Motion</div>
     </footer>
   </body>
+
+  <script>
+    const MM_URL = `https://164-68-111-100.sslip.io/api/matchmaker`; // matchmaker
+    const USER_URL = "https://164-68-111-100.sslip.io/api/user"; // user-service (для JWT)
+
+    const token = localStorage.getItem("jwt"); // после логина сохраняете туда же
+    let pollInterval;
+
+    /* ---------- A. начать поиск ---------- */
+    document.getElementById("findMatchBtn").onclick = async () => {
+      if (!token) {
+        alert("Сначала войдите");
+        return;
+      }
+      document.getElementById("matchStatus").innerText = "Ищем соперника...";
+
+      const res = await fetch(`${MM_URL}/enqueue`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({ trophies: 0, arena: 1 }), // ваши реальные поля
+      });
+      if (!res.ok) {
+        alert("Ошибка enqueue");
+        return;
+      }
+      const { request_id } = await res.json();
+
+      /* ---------- B. опрашиваем статус ---------- */
+      pollInterval = setInterval(async () => {
+        const r = await fetch(`${MM_URL}/enqueue/${request_id}`, {
+          headers: { Authorization: "Bearer " + token },
+        });
+        if (!r.ok) return;
+        const st = await r.json();
+        if (st.status === "found") {
+          clearInterval(pollInterval);
+          document.getElementById("matchStatus").innerText =
+            "Rywal znaleziony!";
+          const connBtn = document.getElementById("connectBtn");
+          connBtn.style.display = "inline-block";
+          document.getElementById("findMatchBtn").style.display = "none";
+
+          connBtn.dataset.seed = st.seed;
+          connBtn.dataset.sid = st.session_id;
+          connBtn.dataset.arena = st.arena_id || st.arena;
+        }
+      }, 1000);
+    };
+
+    /* ---------- C. перейти в игру ---------- */
+    document.getElementById("connectBtn").onclick = function () {
+      const seed = this.dataset.seed;
+      const sid = this.dataset.sid;
+      const arena = this.dataset.arena;
+      location.href = `game.html?seed=${seed}&sessionId=${sid}&arena_id=${arena}`;
+    };
+  </script>
 </html>
