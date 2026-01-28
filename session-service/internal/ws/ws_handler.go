@@ -31,8 +31,9 @@ type SessionWrapper struct {
 }
 
 // WSHandler обрабатывает WS соединения
-func WSHandler(hub *Hub, sessionService *services.SessionService, matchCreator services.MatchCreator) gin.HandlerFunc {
+func WSHandler(hub *Hub, sessionService *services.SessionService, matchCreator services.MatchCreator, sessionScores *SessionScores) gin.HandlerFunc {
 	userClient := clients.NewUserClient()
+
     return func(c *gin.Context) {
         userID := c.GetUint("user_id")
 
@@ -57,10 +58,11 @@ func WSHandler(hub *Hub, sessionService *services.SessionService, matchCreator s
         client := &Client{
             UserID: userID,
             Conn:   conn,
-            Send:   make(chan []byte),
+            Send:   make(chan []byte, 1024),
         }
 
         hub.Register(sessionID, client)
+        fmt.Printf("[HUB] Registered user %d in session %d\n", userID, sessionID)
         defer hub.Unregister(sessionID, client.UserID)
 
 
@@ -77,111 +79,193 @@ func WSHandler(hub *Hub, sessionService *services.SessionService, matchCreator s
 			for msg := range client.Send {
 				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 					fmt.Printf("[WS] Error sending message to user %d: %v\n", userID, err)
-					break
+					//break 
+                    return
 				}
+                fmt.Printf("[WS WRITE] Sent to user %d: %s\n", userID, string(msg))
 			}
 		}()
+        currentSession, err := sessionService.GetSession(sessionID)
+        if err != nil {
+            fmt.Printf("[WS] Error: didnt find currentSession in db")
+        }
+        if currentSession.Status == "finished" {
+            conn.Close()
+            close(client.Send)
+            return
+        }
 
 		// ===== Чтение сообщений от клиента =====
-	go func() {
-    for {
-        fmt.Printf("[WS] Waiting for message from user %d...\n", userID)
-        _, msg, err := conn.ReadMessage()
-       if err != nil {
-			fmt.Printf("[WS] User %d ReadMessage error: %v\n", userID, err)
-			if err.Error() == "websocket: close 1005 (no status)" {
-				fmt.Printf("[WS] User %d left the session\n", userID)
-				
-				if err := sessionService.LeaveSession(session.ID, userID); err != nil {
-					fmt.Printf("[WS] ERROR leaving session: %v\n", err)  // ← Обязательно логируйте ошибку
-				}
-				
-				leaveMsg := fmt.Sprintf(`{"type":"player_left","user_id":%d}`, userID)
-				hub.Broadcast(session.ID, leaveMsg)
-			}
-			break
-		}
-        fmt.Printf("[WS] Received from user %d: %s\n", userID, string(msg))
+	    go func() {
+            for {
+                fmt.Printf("[WS] Waiting for message from user %d...\n", userID)
+            //     _, msg, err := conn.ReadMessage()
+            //    if err != nil {
+            // 		fmt.Printf("[WS] User %d ReadMessage error: %v\n", userID, err)
+            // 		if err.Error() == "websocket: close 1005 (no status)" {
+            // 			fmt.Printf("[WS] User %d left the session\n", userID)
+                        
+            // 			if err := sessionService.LeaveSession(session.ID, userID); err != nil {
+            // 				fmt.Printf("[WS] ERROR leaving session: %v\n", err)  // ← Обязательно логируйте ошибку
+            // 			}
+                        
+            // 			leaveMsg := fmt.Sprintf(`{"type":"player_left","user_id":%d}`, userID)
+            // 			hub.Broadcast(session.ID, leaveMsg)
+            // 		}
+            // 		break
+            // 	}
+                _, msg, err := conn.ReadMessage()
+                if err != nil {
+                    fmt.Printf("[WS] User %d disconnected: %v\n", userID, err)
+                    // Здесь вызываем LeaveSession и делаем broadcast
+                    _ = sessionService.LeaveSession(sessionID, userID)
+                    
+                    leaveMsg := fmt.Sprintf(`{"type":"player_left","user_id":%d}`, userID)
+                    hub.Broadcast(sessionID, leaveMsg)
 
-        var payload map[string]interface{}
-        if err := json.Unmarshal(msg, &payload); err != nil {
-            continue
-        }
-
-        switch payload["type"] {
-        case "score":
-            // 1. Мгновенно извлекаем значение
-            scoreVal, ok := payload["value"].(float64)
-            if !ok { continue }
-            score := int(scoreVal)
-
-            // 2. СРАЗУ рассылаем оппоненту через хаб (без ожидания БД)
-            // Это обеспечит минимальную задержку
-            scoreMsg := fmt.Sprintf(`{"type":"score","userId":%d,"value":%d}`, userID, score)
-            hub.Broadcast(sessionID, scoreMsg)
-
-            // 3. Асинхронно или в фоновом режиме обновляем БД (чтобы не тормозить поток чтения)
-            go func(sid uint, uid uint, s int) {
-                currentSession, err := sessionService.GetSession(sid)
-                if err != nil { return }
-
-                if uid == currentSession.Player1ID {
-                    currentSession.Player1Score = s
-                } else {
-                    currentSession.Player2Score = s
+                    close(client.Send)
+                    conn.Close()
+                    break // выходим из цикла чтения сообщений
                 }
-                sessionService.UpdateSession(currentSession)
-                
-                // Проверка условий конца игры тоже может быть здесь
-                finished, winnerID := checkEndConditions(currentSession)
-                if finished {
-                    finalizeSession(currentSession, winnerID, hub, sessionService, matchCreator, userClient)
+            fmt.Printf("[WS] Received from user %d: %s\n", userID, string(msg))
+
+            var payload map[string]interface{}
+            if err := json.Unmarshal(msg, &payload); err != nil {
+                continue
+            }
+            
+            switch payload["type"] {
+            case "score":
+                if currentSession.Status == "finished" {
+                    conn.Close()
+                    close(client.Send)
+                    return 
                 }
-            }(sessionID, userID, score)
-        case "player_death":
-            currentSession, err := sessionService.GetSession(sessionID)
-            if err != nil { continue }
+                if currentSession.Status != "active" {
+                    continue
+                }
+                if !isPlayerInSession(currentSession, int64(userID)) {
+                    continue
+                }
+                if isPlayerDead(currentSession, int64(userID)) {
+                    continue
+                }
 
-            if userID == currentSession.Player1ID {
-                currentSession.Player1Death = "dead"
-            } else {
-                currentSession.Player2Death = "dead"
-            }
-            sessionService.UpdateSession(currentSession)
-            
-            hub.Broadcast(sessionID, fmt.Sprintf(`{"type":"opponent_death","value":%d}`, userID))
+                // 1. Мгновенно извлекаем значение
+                scoreVal, ok := payload["value"].(float64)
+                if !ok { continue }
+                score := int(scoreVal)
 
-            finished, winnerID := checkEndConditions(currentSession)
-            if finished {
-                finalizeSession(currentSession, winnerID, hub, sessionService, matchCreator, userClient)
-            }
-        case "join":
-            currentSession, err := sessionService.GetSession(sessionID)
-            if err != nil { continue }
-            
-            now := time.Now()
-            updated := false
-            if userID == currentSession.Player1ID && currentSession.Player1JoinedAt == nil {
-                currentSession.Player1JoinedAt = &now
-                updated = true
-            } else if userID == currentSession.Player2ID && currentSession.Player2JoinedAt == nil {
-                currentSession.Player2JoinedAt = &now
-                updated = true
-            }
+                updated := sessionScores.UpdateScore(sessionID, userID, score)
 
-            if currentSession.Player1JoinedAt != nil && currentSession.Player2JoinedAt != nil && currentSession.Status == "waiting" {
-                currentSession.Status = "active"
-                currentSession.StartedAt = &now
-                updated = true
-            }
+                fmt.Printf("[WS] Score from user %d: %d (willUpdate=%v)\n",userID, score, updated)
 
-            if updated {
-                sessionService.UpdateSession(currentSession)
+                // 2. СРАЗУ рассылаем оппоненту через хаб (без ожидания БД)
+                // Это обеспечит минимальную задержку
+                scoreMsg := map[string]interface{}{
+                    "type":   "score",
+                    "value":  score,
+                    "userId": userID,
+                }
+                scoreMsgBytes, _ := json.Marshal(scoreMsg)
+                hub.BroadcastToOthers(sessionID, userID, scoreMsgBytes)
+
+            case "player_death":
+                    if err != nil { continue }
+                    if currentSession.Status != "active" {
+                        continue
+                    }
+
+                    if !isPlayerInSession(currentSession, int64(userID)) {
+                        continue
+                    }
+                    if isPlayerDead(currentSession, int64(userID)) {
+                        continue
+                    }
+
+                    if userID == currentSession.Player1ID {
+                        currentSession.Player1Death = "dead"
+                    } else {
+                        currentSession.Player2Death = "dead"
+                    }
+                    if sessionScores != nil {
+                        currentSession.Player1Score = sessionScores.GetScore(sessionID, session.Player1ID)
+                        currentSession.Player2Score = sessionScores.GetScore(sessionID, session.Player2ID)
+                    }
+                    sessionService.UpdateSession(currentSession)
+                    
+                    deathMsg := map[string]interface{}{
+                        "type":   "opponent_death", 
+                        "userId": userID,
+                    }
+                    deathMsgBytes, _ := json.Marshal(deathMsg)
+                    hub.Broadcast(sessionID, string(deathMsgBytes))
+
+                    finished, winnerID := checkEndConditions(currentSession)
+                    if finished {
+                        finalizeSession(currentSession, winnerID, hub, sessionService, matchCreator, userClient, sessionScores)
+                    }
+            case "join":
+                    if err != nil { continue }
+                    if currentSession.Status != "waiting" {
+                        fmt.Printf("[JOIN] Ignored join: session %d status=%s", session.ID, currentSession.Status)
+                        continue
+                    }
+
+                    now := time.Now()
+                    updated := false
+                    if userID == currentSession.Player1ID && currentSession.Player1JoinedAt == nil {
+                        if isPlayerDead(currentSession, int64(userID)) {
+                            continue
+                        }
+                        currentSession.Player1JoinedAt = &now
+                        updated = true
+                    } else if userID == currentSession.Player2ID && currentSession.Player2JoinedAt == nil {
+                        if currentSession.Player2Death == "dead" {
+                            continue
+                        }
+                        currentSession.Player2JoinedAt = &now
+                        updated = true
+                    }
+
+                    if currentSession.Player1JoinedAt != nil && currentSession.Player2JoinedAt != nil && currentSession.Status == "waiting" {
+                        currentSession.Status = "active"
+                        currentSession.StartedAt = &now
+                        updated = true
+                    }
+
+                    if updated {
+                        sessionService.UpdateSession(currentSession)
+
+                        hub.BroadcastToOthers(
+                            sessionID,
+                            userID,
+                            []byte(fmt.Sprintf(
+                                `{"type":"player_joined","user_id":%d}`,
+                                userID,
+                            )),
+                        )
+                    }
+
+                    p1 := sessionScores.GetScore(sessionID, currentSession.Player1ID)
+                    p2 := sessionScores.GetScore(sessionID, currentSession.Player2ID)
+
+                    stateMsg := map[string]interface{}{
+                        "type": "state",
+                        "scores": map[string]int{
+                            strconv.Itoa(int(currentSession.Player1ID)): p1,
+                            strconv.Itoa(int(currentSession.Player2ID)): p2,
+                        },
+                        "player1Death": currentSession.Player1Death,
+                        "player2Death": currentSession.Player2Death,
+                        "status": currentSession.Status,
+                    }
+
+                    bytes, _ := json.Marshal(stateMsg)
+                    hub.SendTo(sessionID, userID, bytes)
+                }
             }
-            hub.Broadcast(sessionID, fmt.Sprintf(`{"type":"player_joined","user_id":%d}`, userID))
-        }
-    }
-}()
+        }()
     }
 }
 
@@ -237,12 +321,21 @@ func finalizeSession(
     sessionService *services.SessionService, 
     matchCreator services.MatchCreator,
     userClient *clients.UserClient,
+    sessionScores *SessionScores,
 ) {
     if session.Status == "finished" {
         fmt.Printf("[FINALIZE] Session %d already finished, skipping\n", session.ID)
         return
     }
+
+    if sessionScores != nil {
+        session.Player1Score = sessionScores.GetScore(session.ID, session.Player1ID)
+        session.Player2Score = sessionScores.GetScore(session.ID, session.Player2ID)
+        sessionScores.CleanupSession(session.ID) // Чистим память
+    }
+
     fmt.Printf("[FINALIZE] Finalizing session %d, winner %v\n", session.ID, winnerID)
+    fmt.Printf("[FINALIZE] Scores from memory: P1=%d, P2=%d\n", session.Player1Score, session.Player2Score)
 
     session.WinnerID = winnerID
     session.Status = "finished"
@@ -306,6 +399,14 @@ func finalizeSession(
     matchCreator.CreateMatchDirect(matchDTO)
 }
 
+func isPlayerDead(s *models.Session, userID int64) bool {
+    return (userID == int64(s.Player1ID) && s.Player1Death == "dead") ||
+           (userID == int64(s.Player2ID) && s.Player2Death == "dead")
+}
+
+func isPlayerInSession(s *models.Session, userID int64) bool {
+    return userID == int64(s.Player1ID) || userID == int64(s.Player2ID)
+}
 
 // func (h *SessionHandler) LeaveSession(c *gin.Context) {
 //     var body dto.LeaveSessionDTO

@@ -44,12 +44,13 @@ func main() {
 	repo := repositories.NewSessionRepository()
 	sessionService := services.NewSessionService(repo)
 	matchHandler := handlers.NewMatchHandler()
+	sessionScore := ws.NewSessionScores()
 
 
 	routes.RegisterRoutes(r, hub)
 
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
-	r.GET("/ws", middleware.AuthMiddleware(hub, sessionService), ws.WSHandler(hub, sessionService, matchHandler))
+	r.GET("/ws", middleware.AuthMiddleware(hub, sessionService), ws.WSHandler(hub, sessionService, matchHandler, sessionScore))
 
 	log.Println("🚀 Session Service running on port " + cfg.AppPort)
 	r.Run(":" + cfg.AppPort)
