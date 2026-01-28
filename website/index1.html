@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Trening – Doodle Jump Motion</title>
+    <title>Arena – Doodle Jump Motion</title>
     <link rel="stylesheet" href="style.css" />
     <script src="config.js?v=2"></script>
     <script src="scripts/index.js" defer></script>
@@ -15,7 +15,7 @@
           <img src="logo.png" alt="Doodle Jump Motion" />
           <div class="brand">
             <div class="brand-title">Doodle Jump Motion</div>
-            <div class="brand-sub">Tryb Singleplayer</div>
+            <div class="brand-sub">Tryb Multiplayer</div>
           </div>
         </div>
 
@@ -28,7 +28,8 @@
                 <div class="profile-icon-container">
                     <span class="profile-avatar">👤</span> 
                 </div>
-                <div class="profile-dropdown" id="profile-dropdown-content"></div>
+                <div class="profile-dropdown" id="profile-dropdown-content">
+                    </div>
             </div>
         </div>
       </div>
@@ -36,13 +37,18 @@
 
     <main class="container">
       <section class="hero">
-        <h1>Trening Solo</h1>
-        <p>Wybierz mapę i przetestuj sterowanie.</p>
+        <h1>Arena Online</h1>
+        <p></p>
 
         <div id="dashboard-container"></div>
+        
+        <div id="auth-error" style="color: red; display: none; margin-bottom: 10px;"></div>
 
-        <div style="margin-top: 30px;">
-            <button id="actionBtn" class="btn-primary">Rozpocznij Trening</button>
+        <div id="matchStatus" style="margin: 20px 0; color: #353535; font-weight: bold; min-height: 24px;"></div>
+
+        <div>
+            <button id="actionBtn" class="btn-primary">Szukaj Rywala</button>
+            <button id="connectBtn" class="btn-primary" style="display: none; background-color: #2ecc71;">Dołącz do gry!</button>
         </div>
       </section>
     </main>
