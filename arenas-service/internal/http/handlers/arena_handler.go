@@ -35,7 +35,7 @@ func (h *ArenaHandler) GetArenaByCups(c *gin.Context) {
 		return
 	}
 
-	if role == "player" && arena.MinCups > userCups || arena.MaxCups < userCups {
+	if role == "player" && (arena.MinCups > userCups || arena.MaxCups < userCups) {
 		userArena, err := h.service.GetArenaByUserID(userID)
 		if err != nil || userArena.ID != arena.ID {
 			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden: can access only your own arena"})

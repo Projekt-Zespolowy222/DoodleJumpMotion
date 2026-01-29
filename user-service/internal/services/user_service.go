@@ -46,11 +46,12 @@ func CheckPasswordHash(password, hash string) bool {
     return err == nil
 }
 
-func GenerateJWT(userID int64, username, role string) (string, error) {
+func GenerateJWT(userID int64, username, role string, cupCount int) (string, error) {
     claims := jwt.MapClaims{
         "user_id":  userID,
         "username": username,
 		"role":     role,
+		"cup_count": cupCount,
         "exp":      time.Now().Add(time.Hour * 72).Unix(),
     }
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -79,6 +80,7 @@ func GenerateAdminJWT(userID int64, username string) (string, error) {
 		"user_id":  userID,
 		"username": username,
 		"role":     "admin",
+		"cup_count": 9999,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtSecret)

@@ -9,13 +9,13 @@ import React, {
 } from "react";
 
 import {
-  Alert,
   ImageBackground,
   Platform,
   StyleSheet,
   Text,
   View,
   Image,
+  TouchableOpacity,
 } from "react-native";
 import Animated, {
   SharedValue,
@@ -172,7 +172,7 @@ export const GameScreen = ({
   const { platformsData, isReady, userId } = useInitializeGame(
     seed,
     arenaId,
-    setOpponentScore
+    setOpponentScore,
   );
 
   // 2. Рефы для игровых состояний (не вызывают ререндер)
@@ -182,10 +182,15 @@ export const GameScreen = ({
   const started = useRef(false);
   const gameOver = useRef(false);
   const rndRef = useRef(new SeededRandom(seed));
+  const minYReached = useRef(0);
 
   // 3. Состояние для UI (вызывают ререндер)
   const [score, setScore] = useState(0);
   const [cameraActive, setCameraActive] = useState(false);
+
+  // === НОВОЕ: Состояния для Game Over экрана ===
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [finalScore, setFinalScore] = useState(0);
 
   // 4. Подключение Pose (Камера и детекция)
   const {
@@ -199,7 +204,7 @@ export const GameScreen = ({
   const { startDetection, stopDetection } = usePoseLandmarker(
     videoRef,
     setTorsoCoords,
-    setIsJumping
+    setIsJumping,
   );
 
   // 5. Инициализация Shared Values
@@ -222,10 +227,10 @@ export const GameScreen = ({
       platform.y.value = highestY - gap;
       platform.x.value = rndRef.current.range(
         30,
-        width - arenaConfig.platformWidth - 30
+        width - arenaConfig.platformWidth - 30,
       );
     },
-    [platforms, arenaConfig.jumpHeight, arenaConfig.platformWidth]
+    [platforms, arenaConfig.jumpHeight, arenaConfig.platformWidth],
   );
 
   const moveSpeed = useRef(arenaConfig.moveSpeed);
@@ -247,7 +252,10 @@ export const GameScreen = ({
     score,
     setScore,
     createNewPlatform,
-    moveSpeed
+    moveSpeed,
+    minYReached,
+    setIsGameOver,
+    setFinalScore,
   );
 
   useEffect(() => {
@@ -369,6 +377,20 @@ export const GameScreen = ({
       />
 
       <Score y={score} opponentY={opponentScore} />
+      {isGameOver && (
+        <View style={styles.gameOverOverlay}>
+          <View style={styles.gameOverBox}>
+            <Text style={styles.gameOverTitle}>💀 GAME OVER</Text>
+            <Text style={styles.gameOverScore}>Your Score: {finalScore}</Text>
+            <TouchableOpacity
+              style={styles.restartButton}
+              onPress={() => window.location.reload()}
+            >
+              <Text style={styles.restartButtonText}>Play Again</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <Animated.View style={[styles.doodleContainer, doodleStyle]}>
         {/* Передаем текстуру в Doodle */}
@@ -462,12 +484,58 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
   },
+  gameOverOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  gameOverBox: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 40,
+    alignItems: "center",
+    minWidth: 300,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  gameOverTitle: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#e74c3c",
+    marginBottom: 20,
+  },
+  gameOverScore: {
+    fontSize: 24,
+    color: "#2c3e50",
+    marginBottom: 30,
+    fontWeight: "600",
+  },
+  restartButton: {
+    backgroundColor: "#3498db",
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 10,
+  },
+  restartButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
 });
 
 const useInitializeGame = (
   seed: number,
   arenaId: string,
-  setOpponentScore: (s: number) => void
+  setOpponentScore: (s: number) => void,
 ) => {
   const platformPositions = useSeededPlatforms(seed);
   const [userId, setUserId] = useState<number>(0);
@@ -535,7 +603,7 @@ const useInitializeGame = (
 };
 export const useManagePlatforms = (
   platformsData: { x: number; y: number }[] | undefined,
-  seed: number
+  seed: number,
 ) => {
   // 1. Создаем фиксированный массив SharedValues.
   // Это ЕДИНСТВЕННЫЙ безопасный способ инициализировать массив хуков.
@@ -585,7 +653,7 @@ export const useManagePlatforms = (
       p18,
       p19,
     ],
-    []
+    [],
   );
 
   // 2. Инициализация данными с сервера
@@ -599,7 +667,7 @@ export const useManagePlatforms = (
         }
       });
       console.log(
-        `[GAME] Initialized ${platformsData.length} platforms with seed: ${seed}`
+        `[GAME] Initialized ${platformsData.length} platforms with seed: ${seed}`,
       );
     }
   }, [platformsData]);
@@ -641,7 +709,10 @@ const useManagePhysics = (
   score: number,
   setScore: (s: number) => void,
   createNewPlatform: (p: PlatformType) => void,
-  moveSpeed: any
+  moveSpeed: any,
+  minYReached: React.RefObject<number>,
+  setIsGameOver: (v: boolean) => void,
+  setFinalScore: (s: number) => void,
 ) => {
   useEffect(() => {
     const interval = setInterval(() => {
@@ -658,9 +729,14 @@ const useManagePhysics = (
       cameraOffset.value += diff * 0.1;
 
       // ОБНОВЛЕННЫЙ БЛОК СЧЕТА:
-      const currentHeightScore = Math.floor(Math.abs(y.value) / 10);
-      if (currentHeightScore > score) {
-        setScore(currentHeightScore);
+      if (y.value < minYReached.current) {
+        minYReached.current = y.value;
+        const currentHeightScore = Math.floor(
+          Math.abs(minYReached.current) / 10,
+        );
+        if (currentHeightScore > score) {
+          setScore(currentHeightScore);
+        }
       }
 
       // 2. Горизонтальное движение
@@ -669,7 +745,7 @@ const useManagePhysics = (
       } else if (moveDirection.current === "right") {
         x.value = Math.min(
           width - config.doodleSize,
-          x.value + moveSpeed.current
+          x.value + moveSpeed.current,
         );
       }
 
@@ -731,7 +807,8 @@ const useManagePhysics = (
         // Если ушел за нижний край экрана
         gameOver.current = true;
         publishDeath(userId);
-        Alert.alert("Game Over", `Score: ${score}`);
+        setFinalScore(score);
+        setIsGameOver(true);
       }
     }, 16);
 
@@ -754,7 +831,7 @@ const useManageInput = (
   torsoCoords: { x: number; y: number },
   velocityY: SharedValue<number>,
   isOnPlatform: React.RefObject<boolean>,
-  config: ArenaConfig
+  config: ArenaConfig,
 ) => {
   const lastJumpTime = useRef(0);
 

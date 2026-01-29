@@ -58,7 +58,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
         return
     }
 
-    token, err := services.GenerateJWT(user.ID, user.Username, user.Role)
+    token, err := services.GenerateJWT(user.ID, user.Username, user.Role, user.CupCount)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
         return
@@ -94,7 +94,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
         return
     }
 
-	token, err := services.GenerateJWT(user.ID, user.Username,  user.Role)
+	token, err := services.GenerateJWT(user.ID, user.Username,  user.Role, user.CupCount)
 	if err != nil {
         c.JSON(500, gin.H{"error": "failed to generate token"})
         return

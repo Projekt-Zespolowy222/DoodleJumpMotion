@@ -54,6 +54,12 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set("user_id", int64(claims["user_id"].(float64)))
 		c.Set("role", claims["role"].(string))
 
+		if cupCount, ok := claims["cup_count"].(float64); ok {
+			c.Set("cup_count", int(cupCount))
+		} else {
+			c.Set("cup_count", 0)
+		}
+
 		c.Next()
 	}
 }
