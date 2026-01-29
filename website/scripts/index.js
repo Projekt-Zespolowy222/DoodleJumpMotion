@@ -3,7 +3,7 @@ const ARENA_URL = "https://164-68-111-100.sslip.io/api/arena";
 const MM_URL = "https://164-68-111-100.sslip.io/api/matchmaker";
 
 // Sprawdzamy tryb na podstawie nazwy pliku (możesz to dostosować)
-const isMultiplayer = !window.location.pathname.includes("single");
+const isMultiplayer = window.location.pathname.includes("index1");
 let selectedArenaId = 1;
 const MAX_ARENAS = 10;
 let pollInterval;
@@ -127,6 +127,12 @@ async function fetchArenaDetails(cups, token) {
       console.log("Setting text:", name, theme); // DEBUG
 
       updateArenaText(data.Name, data.Theme);
+
+      const img = document.getElementById("arena-img");
+      if (img && data.id) {
+        img.src = `img/arena${data.id}.jpg`;
+        selectedArenaId = data.id; // Синхронизируем переменную
+      }
     } else {
       console.error("Response not OK:", res.status); // DEBUG
       updateArenaText("Nieznana Arena", "Graj dalej, aby odkryć więcej!");

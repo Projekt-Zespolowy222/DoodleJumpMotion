@@ -55,7 +55,7 @@ function openWS(sid) {
           // Пробрасываем в игру
           gameIframe.contentWindow.postMessage(
             {
-              type: "OPPONENT_SCORE", // Игра должна слушать этот тип!
+              type: "opponent_score", // Игра должна слушать этот тип!
               value: scoreValue,
               userId: senderId,
             },
@@ -67,7 +67,7 @@ function openWS(sid) {
         if (msg.type === "opponent_death") {
           gameIframe.contentWindow.postMessage(
             {
-              type: "OPPONENT_DEATH",
+              type: "opponent_death",
               userId: msg.value,
             },
             "*",
