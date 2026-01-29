@@ -10,32 +10,18 @@ async function register(username, email, password) {
       body: JSON.stringify({ username, email, password, role: "player" }),
     });
 
-    // Próbujemy odczytać odpowiedź, niezależnie czy sukces czy błąd
-    let data;
-    try {
-      data = await res.json();
-    } catch (e) {
-      data = null;
-    }
-
     if (!res.ok) {
-      // Jeśli serwer zwrócił błąd, szukamy komunikatu w różnych miejscach
-      const errorMessage =
-        data?.message ||
-        data?.error ||
-        res.statusText ||
-        "Nieznany błąd rejestracji";
-      throw new Error(errorMessage);
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.message || "Błąd rejestracji");
     }
 
+    const data = await res.json();
     localStorage.setItem("jwt", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
 
-    alert("Rejestracja udana! Witaj w grze.");
-    window.location.href = "welcome.html";
+    window.location.href = "howToPlay.html";
   } catch (err) {
-    console.error("Szczegóły błędu:", err);
-    alert("Wystąpił błąd: " + err.message);
+    alert(err.message);
   }
 }
 

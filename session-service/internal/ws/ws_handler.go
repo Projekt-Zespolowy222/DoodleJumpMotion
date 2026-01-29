@@ -61,19 +61,9 @@ func WSHandler(hub *Hub, sessionService *services.SessionService, matchCreator s
             Send:   make(chan []byte, 1024),
         }
 
-        currentSession, err := sessionService.GetSession(sessionID)
-        if err != nil {
-            _ = conn.Close()
-            fmt.Printf("[WS] Error: didnt find currentSession in db")
-            return
-        }
-        if currentSession.Status == "finished" {
-            _ = conn.Close()
-            return 
-        }
-
         hub.Register(sessionID, client)
         fmt.Printf("[HUB] Registered user %d in session %d\n", userID, sessionID)
+        defer hub.Unregister(sessionID, client.UserID)
 
 
 		seedMsg := fmt.Sprintf(`{"type":"seed","value":%d}`, session.Seed)
@@ -95,7 +85,10 @@ func WSHandler(hub *Hub, sessionService *services.SessionService, matchCreator s
                 fmt.Printf("[WS WRITE] Sent to user %d: %s\n", userID, string(msg))
 			}
 		}()
-        
+        currentSession, err := sessionService.GetSession(sessionID)
+        if err != nil {
+            fmt.Printf("[WS] Error: didnt find currentSession in db")
+        }
         if currentSession.Status == "finished" {
             conn.Close()
             close(client.Send)
@@ -103,208 +96,50 @@ func WSHandler(hub *Hub, sessionService *services.SessionService, matchCreator s
         }
 
 		// ===== Чтение сообщений от клиента =====
-	    // go func() {
-        //     for {
-        //         fmt.Printf("[WS] Waiting for message from user %d...\n", userID)
-        //     //     _, msg, err := conn.ReadMessage()
-        //     //    if err != nil {
-        //     // 		fmt.Printf("[WS] User %d ReadMessage error: %v\n", userID, err)
-        //     // 		if err.Error() == "websocket: close 1005 (no status)" {
-        //     // 			fmt.Printf("[WS] User %d left the session\n", userID)
+	    go func() {
+            for {
+                fmt.Printf("[WS] Waiting for message from user %d...\n", userID)
+            //     _, msg, err := conn.ReadMessage()
+            //    if err != nil {
+            // 		fmt.Printf("[WS] User %d ReadMessage error: %v\n", userID, err)
+            // 		if err.Error() == "websocket: close 1005 (no status)" {
+            // 			fmt.Printf("[WS] User %d left the session\n", userID)
                         
-        //     // 			if err := sessionService.LeaveSession(session.ID, userID); err != nil {
-        //     // 				fmt.Printf("[WS] ERROR leaving session: %v\n", err)  // ← Обязательно логируйте ошибку
-        //     // 			}
+            // 			if err := sessionService.LeaveSession(session.ID, userID); err != nil {
+            // 				fmt.Printf("[WS] ERROR leaving session: %v\n", err)  // ← Обязательно логируйте ошибку
+            // 			}
                         
-        //     // 			leaveMsg := fmt.Sprintf(`{"type":"player_left","user_id":%d}`, userID)
-        //     // 			hub.Broadcast(session.ID, leaveMsg)
-        //     // 		}
-        //     // 		break
-        //     // 	}
-        //         _, msg, err := conn.ReadMessage()
-        //         if err != nil {
-        //             fmt.Printf("[WS] User %d disconnected: %v\n", userID, err)
-        //             // Здесь вызываем LeaveSession и делаем broadcast
-        //             _ = sessionService.LeaveSession(sessionID, userID)
+            // 			leaveMsg := fmt.Sprintf(`{"type":"player_left","user_id":%d}`, userID)
+            // 			hub.Broadcast(session.ID, leaveMsg)
+            // 		}
+            // 		break
+            // 	}
+                _, msg, err := conn.ReadMessage()
+                if err != nil {
+                    fmt.Printf("[WS] User %d disconnected: %v\n", userID, err)
+                    // Здесь вызываем LeaveSession и делаем broadcast
+                    _ = sessionService.LeaveSession(sessionID, userID)
                     
-        //             leaveMsg := fmt.Sprintf(`{"type":"player_left","user_id":%d}`, userID)
-        //             hub.Broadcast(sessionID, leaveMsg)
+                    leaveMsg := fmt.Sprintf(`{"type":"player_left","user_id":%d}`, userID)
+                    hub.Broadcast(sessionID, leaveMsg)
 
-        //             close(client.Send)
-        //             conn.Close()
-        //             break // выходим из цикла чтения сообщений
-        //         }
-        //     fmt.Printf("[WS] Received from user %d: %s\n", userID, string(msg))
-
-        //     var payload map[string]interface{}
-        //     if err := json.Unmarshal(msg, &payload); err != nil {
-        //         continue
-        //     }
-            
-        //     switch payload["type"] {
-        //     case "score":
-        //         if currentSession.Status == "finished" {
-        //             conn.Close()
-        //             close(client.Send)
-        //             return 
-        //         }
-        //         if currentSession.Status != "active" {
-        //             continue
-        //         }
-        //         if !isPlayerInSession(currentSession, int64(userID)) {
-        //             continue
-        //         }
-        //         if isPlayerDead(currentSession, int64(userID)) {
-        //             continue
-        //         }
-
-        //         // 1. Мгновенно извлекаем значение
-        //         scoreVal, ok := payload["value"].(float64)
-        //         if !ok { continue }
-        //         score := int(scoreVal)
-
-        //         updated := sessionScores.UpdateScore(sessionID, userID, score)
-
-        //         fmt.Printf("[WS] Score from user %d: %d (willUpdate=%v)\n",userID, score, updated)
-
-        //         // 2. СРАЗУ рассылаем оппоненту через хаб (без ожидания БД)
-        //         // Это обеспечит минимальную задержку
-        //         scoreMsg := map[string]interface{}{
-        //             "type":   "score",
-        //             "value":  score,
-        //             "userId": userID,
-        //         }
-        //         scoreMsgBytes, _ := json.Marshal(scoreMsg)
-        //         hub.BroadcastToOthers(sessionID, userID, scoreMsgBytes)
-
-        //     case "player_death":
-        //             if err != nil { continue }
-        //             if currentSession.Status != "active" {
-        //                 continue
-        //             }
-
-        //             if !isPlayerInSession(currentSession, int64(userID)) {
-        //                 continue
-        //             }
-        //             if isPlayerDead(currentSession, int64(userID)) {
-        //                 continue
-        //             }
-
-        //             if userID == currentSession.Player1ID {
-        //                 currentSession.Player1Death = "dead"
-        //             } else {
-        //                 currentSession.Player2Death = "dead"
-        //             }
-        //             if sessionScores != nil {
-        //                 currentSession.Player1Score = sessionScores.GetScore(sessionID, session.Player1ID)
-        //                 currentSession.Player2Score = sessionScores.GetScore(sessionID, session.Player2ID)
-        //             }
-        //             sessionService.UpdateSession(currentSession)
-                    
-        //             deathMsg := map[string]interface{}{
-        //                 "type":   "opponent_death", 
-        //                 "userId": userID,
-        //             }
-        //             deathMsgBytes, _ := json.Marshal(deathMsg)
-        //             hub.Broadcast(sessionID, string(deathMsgBytes))
-
-        //             finished, winnerID := checkEndConditions(currentSession)
-        //             if finished {
-        //                 finalizeSession(currentSession, winnerID, hub, sessionService, matchCreator, userClient, sessionScores)
-        //             }
-        //     case "join":
-        //             if err != nil { continue }
-        //             if currentSession.Status != "waiting" {
-        //                 fmt.Printf("[JOIN] Ignored join: session %d status=%s", session.ID, currentSession.Status)
-        //                 continue
-        //             }
-
-        //             now := time.Now()
-        //             updated := false
-        //             if userID == currentSession.Player1ID && currentSession.Player1JoinedAt == nil {
-        //                 if isPlayerDead(currentSession, int64(userID)) {
-        //                     continue
-        //                 }
-        //                 currentSession.Player1JoinedAt = &now
-        //                 updated = true
-        //             } else if userID == currentSession.Player2ID && currentSession.Player2JoinedAt == nil {
-        //                 if currentSession.Player2Death == "dead" {
-        //                     continue
-        //                 }
-        //                 currentSession.Player2JoinedAt = &now
-        //                 updated = true
-        //             }
-
-        //             if currentSession.Player1JoinedAt != nil && currentSession.Player2JoinedAt != nil && currentSession.Status == "waiting" {
-        //                 currentSession.Status = "active"
-        //                 currentSession.StartedAt = &now
-        //                 updated = true
-        //             }
-
-        //             if updated {
-        //                 sessionService.UpdateSession(currentSession)
-
-        //                 hub.BroadcastToOthers(
-        //                     sessionID,
-        //                     userID,
-        //                     []byte(fmt.Sprintf(
-        //                         `{"type":"player_joined","user_id":%d}`,
-        //                         userID,
-        //                     )),
-        //                 )
-        //             }
-
-        //             p1 := sessionScores.GetScore(sessionID, currentSession.Player1ID)
-        //             p2 := sessionScores.GetScore(sessionID, currentSession.Player2ID)
-
-        //             stateMsg := map[string]interface{}{
-        //                 "type": "state",
-        //                 "scores": map[string]int{
-        //                     strconv.Itoa(int(currentSession.Player1ID)): p1,
-        //                     strconv.Itoa(int(currentSession.Player2ID)): p2,
-        //                 },
-        //                 "player1Death": currentSession.Player1Death,
-        //                 "player2Death": currentSession.Player2Death,
-        //                 "status": currentSession.Status,
-        //             }
-
-        //             bytes, _ := json.Marshal(stateMsg)
-        //             hub.SendTo(sessionID, userID, bytes)
-        //         }
-        //     }
-        // }()
-
-        shouldClose := false
-        for {
-            fmt.Printf("[WS] Waiting for message from user %d...\n", userID)
-
-            _, msg, err := conn.ReadMessage()
-            if err != nil {
-                shouldClose = true
-                fmt.Printf("[WS] User %d disconnected: %v\n", userID, err)
-
-                _ = sessionService.LeaveSession(sessionID, userID)
-                leaveMsg := fmt.Sprintf(`{"type":"player_left","user_id":%d}`, userID)
-                hub.Broadcast(sessionID, leaveMsg)
-
-                // ✅ порядок важен:
-                hub.Unregister(sessionID, userID)
-                close(client.Send)
-                _ = conn.Close()
-                break
-            }
-
+                    close(client.Send)
+                    conn.Close()
+                    break // выходим из цикла чтения сообщений
+                }
             fmt.Printf("[WS] Received from user %d: %s\n", userID, string(msg))
 
             var payload map[string]interface{}
             if err := json.Unmarshal(msg, &payload); err != nil {
                 continue
             }
-
+            
             switch payload["type"] {
             case "score":
                 if currentSession.Status == "finished" {
-                    shouldClose = true
+                    conn.Close()
+                    close(client.Send)
+                    return 
                 }
                 if currentSession.Status != "active" {
                     continue
@@ -336,7 +171,6 @@ func WSHandler(hub *Hub, sessionService *services.SessionService, matchCreator s
                 hub.BroadcastToOthers(sessionID, userID, scoreMsgBytes)
 
             case "player_death":
-                    currentSession, err = sessionService.GetSession(sessionID)
                     if err != nil { continue }
                     if currentSession.Status != "active" {
                         continue
@@ -372,7 +206,6 @@ func WSHandler(hub *Hub, sessionService *services.SessionService, matchCreator s
                         finalizeSession(currentSession, winnerID, hub, sessionService, matchCreator, userClient, sessionScores)
                     }
             case "join":
-                    currentSession, err = sessionService.GetSession(sessionID)
                     if err != nil { continue }
                     if currentSession.Status != "waiting" {
                         fmt.Printf("[JOIN] Ignored join: session %d status=%s", session.ID, currentSession.Status)
@@ -430,12 +263,9 @@ func WSHandler(hub *Hub, sessionService *services.SessionService, matchCreator s
 
                     bytes, _ := json.Marshal(stateMsg)
                     hub.SendTo(sessionID, userID, bytes)
+                }
             }
-            if shouldClose {break}
-        }
-        hub.Unregister(sessionID, userID)
-        close(client.Send)
-        _ = conn.Close()
+        }()
     }
 }
 

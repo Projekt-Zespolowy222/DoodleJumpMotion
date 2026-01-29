@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pl">
   <head>
     <meta charset="UTF-8" />
@@ -7,125 +7,16 @@
     <link rel="stylesheet" href="style.css" />
     <script src="config.js?v=2"></script>
     <script src="scripts/register.js" defer></script>
-    <style>
-      /* Te same style karty co w login.html dla spójności */
-      .auth-card {
-        background: rgba(255, 255, 255, 0.5);
-        backdrop-filter: blur(12px);
-        padding: 40px;
-        border-radius: 24px;
-        border: 2px solid rgba(255, 255, 255, 0.6);
-        width: 100%;
-        max-width: 420px;
-        margin: 0 auto;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
-        text-align: center;
-      }
-
-      .auth-card h1 {
-        margin-top: 0;
-        margin-bottom: 10px;
-        font-size: 32px;
-      }
-
-      .auth-subtitle {
-        color: #555;
-        margin-bottom: 30px;
-        font-size: 15px;
-      }
-
-      /* Style inputów */
-      .auth-card input {
-        width: 100%;
-        margin-bottom: 15px;
-        padding: 14px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        background: rgba(255, 255, 255, 0.8);
-        font-size: 16px;
-        transition:
-          border-color 0.2s,
-          box-shadow 0.2s;
-      }
-
-      .auth-card input:focus {
-        outline: none;
-        border-color: var(--accent);
-        box-shadow: 0 0 0 4px rgba(255, 179, 0, 0.2);
-        background: white;
-      }
-
-      .auth-card .btn-primary {
-        width: 100%;
-        margin-top: 10px;
-        cursor: pointer;
-        border: none;
-      }
-
-      /* Link przełączania na dole */
-      .auth-switch {
-        margin-top: 25px;
-        font-size: 14px;
-        color: #444;
-      }
-
-      .auth-switch a {
-        color: var(--accent);
-        font-weight: 700;
-        text-decoration: none;
-        margin-left: 5px;
-      }
-
-      .auth-switch a:hover {
-        text-decoration: underline;
-      }
-    </style>
   </head>
   <body>
-    <header class="site-header">
-      <div class="container header-inner">
-        <div class="logo">
-          <img src="logo.png" alt="Logo" />
-          <div class="brand">
-            <div class="brand-title">Doodle Jump Motion</div>
-          </div>
-        </div>
-        <nav class="main-nav">
-          <a href="welcome.html">Wróć</a>
-        </nav>
-      </div>
-    </header>
-
-    <main class="container">
-      <section class="hero" style="height: auto; padding-top: 40px">
-        <div class="auth-card">
-          <h1>Stwórz konto</h1>
-          <p class="auth-subtitle">
-            Dołącz do gry i zapisuj swoje wyniki w rankingu.
-          </p>
-
-          <form id="registerForm">
-            <input
-              type="text"
-              id="username"
-              placeholder="Nazwa użytkownika"
-              required
-            />
-            <input type="email" id="email" placeholder="Adres Email" required />
-            <input type="password" id="password" placeholder="Hasło" required />
-            <button class="btn-primary" type="submit">Zarejestruj się</button>
-          </form>
-
-          <div class="auth-switch">
-            Masz już konto?
-            <a href="login.html">Zaloguj się</a>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="site-footer">
-      <div class="container">© 2025 Doodle Jump Motion</div>
-    </footer>
+    <section class="hero">
+      <h1>Rejestracja</h1>
+      <form id="registerForm">
+        <input type="text" id="username" placeholder="Login" required />
+        <input type="email" id="email" placeholder="Email" required />
+        <input type="password" id="password" placeholder="Hasło" required />
+        <button class="btn-primary" type="submit">Utwórz konto</button>
+      </form>
+    </section>
   </body>
 </html>
