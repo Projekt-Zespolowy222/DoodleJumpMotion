@@ -111,13 +111,24 @@ async function initDashboard() {
 
 async function fetchArenaDetails(cups, token) {
   try {
+    console.log("Fetching arena for cups:", cups); // DEBUG
+
     const res = await fetch(`${ARENA_URL}/${cups}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+
+    console.log("Response status:", res.status); // DEBUG
     if (res.ok) {
       const data = await res.json();
-      updateArenaText(data.name, data.theme);
+      console.log("Received data:", data); // DEBUG
+
+      const name = data.name || data.Name || "Unknown Arena";
+      const theme = data.theme || data.Theme || "No description";
+      console.log("Setting text:", name, theme); // DEBUG
+
+      updateArenaText(data.Name, data.Theme);
     } else {
+      console.error("Response not OK:", res.status); // DEBUG
       updateArenaText("Nieznana Arena", "Graj dalej, aby odkryć więcej!");
     }
   } catch (e) {
@@ -133,15 +144,96 @@ function updateArenaText(name, desc) {
   if (d) d.textContent = desc;
 }
 
+const arenaData = {
+  1: {
+    name: "Fertile fields",
+    theme: "Fields and forests. Simple platforms and early boosters.",
+    minCups: 0,
+    maxCups: 499,
+  },
+  2: {
+    name: "City Rooftops",
+    theme: "City rooftops. Platforms with varying heights and small obstacles.",
+    minCups: 500,
+    maxCups: 999,
+  },
+  3: {
+    name: "Mountain Peaks",
+    theme:
+      "High mountain ridges. Slippery platforms and strong winds that slow jumps.",
+    minCups: 1000,
+    maxCups: 1499,
+  },
+  4: {
+    name: "Sky Clouds",
+    theme:
+      "Floating clouds. Platforms occasionally disappear, cloud currents speed up or slow down movement.",
+    minCups: 1500,
+    maxCups: 1999,
+  },
+  5: {
+    name: "Storm Zone",
+    theme:
+      "Thunderstorms. Lightning strikes and powerful winds make precise jumps difficult.",
+    minCups: 2000,
+    maxCups: 2499,
+  },
+  6: {
+    name: "Upper Atmosphere",
+    theme:
+      "Stratosphere. Thin air increases jump height but platforms are rare.",
+    minCups: 2500,
+    maxCups: 2999,
+  },
+  7: {
+    name: "Low Orbit",
+    theme: "Space station in low orbit. Low gravity and new types of boosters.",
+    minCups: 3000,
+    maxCups: 3499,
+  },
+  8: {
+    name: "Planetary System",
+    theme:
+      "Planetary orbits. Jumping between mini-planets, rotating platforms.",
+    minCups: 3500,
+    maxCups: 3999,
+  },
+  9: {
+    name: "Interstellar Space",
+    theme:
+      "Interstellar void. Extremely rare platforms and gravitational acceleration from stars.",
+    minCups: 4000,
+    maxCups: 4499,
+  },
+  10: {
+    name: "Galactic Summit",
+    theme:
+      "Galactic peak. Legendary arena with unique boosters and cosmic visual effects.",
+    minCups: 4500,
+    maxCups: 999999,
+  },
+};
+
 function changeArena(dir) {
   selectedArenaId += dir;
-  if (selectedArenaId < 1) selectedArenaId = MAX_ARENAS;
-  if (selectedArenaId > MAX_ARENAS) selectedArenaId = 1;
+  // Цикл 1-10 (без тестовой арены 12)
+  if (selectedArenaId < 1) selectedArenaId = 10;
+  if (selectedArenaId > 10) selectedArenaId = 1;
 
   const img = document.getElementById("arena-img");
-  const title = document.getElementById("arena-name");
-  if (img) img.src = `img/arena${selectedArenaId}.jpg`;
-  if (title) title.textContent = `Arena ${selectedArenaId}`;
+  const data = arenaData[selectedArenaId];
+
+  if (img) {
+    img.src = `img/arena${selectedArenaId}.jpg`;
+    img.onerror = function () {
+      this.src = "img/arena1.jpg";
+    };
+  }
+
+  // Обновляем название и описание из БД
+  if (data) {
+    updateArenaText(data.name, data.theme);
+  }
 }
 
 function setupProfileWidget(user, token) {
